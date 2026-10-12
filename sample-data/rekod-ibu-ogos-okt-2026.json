@@ -1,0 +1,620 @@
+{
+  "entries": [
+    {
+      "kind": "glucose",
+      "date": "2026-08-25",
+      "value": 5.6,
+      "time": "",
+      "context": "unspecified",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-08-26",
+      "value": 5.4,
+      "time": "",
+      "context": "unspecified",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-08-27",
+      "value": 6,
+      "time": "09:00",
+      "context": "unspecified",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-08-27",
+      "value": 5.2,
+      "time": "12:30",
+      "context": "other",
+      "notes": "Selepas makan ubat, suplemen dan susu Sauver"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-08-28",
+      "value": 5.9,
+      "time": "09:45",
+      "context": "unspecified",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-08-29",
+      "value": 5,
+      "time": "09:35",
+      "context": "unspecified",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-08-30",
+      "value": 5.2,
+      "time": "09:30",
+      "context": "unspecified",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-08-31",
+      "value": 5.7,
+      "time": "10:30",
+      "context": "unspecified",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-01",
+      "value": 5.4,
+      "time": "08:15",
+      "context": "unspecified",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-02",
+      "value": 6.2,
+      "time": "08:35",
+      "context": "unspecified",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-03",
+      "value": 4.9,
+      "time": "07:20",
+      "context": "unspecified",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-04",
+      "value": 5.5,
+      "time": "08:30",
+      "context": "unspecified",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-05",
+      "value": 5.3,
+      "time": "10:45",
+      "context": "unspecified",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-06",
+      "value": 5.4,
+      "time": "09:30",
+      "context": "unspecified",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-07",
+      "value": 5.2,
+      "time": "08:30",
+      "context": "unspecified",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-08",
+      "value": 5.5,
+      "time": "04:50",
+      "context": "unspecified",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-09",
+      "value": 5.7,
+      "time": "08:40",
+      "context": "unspecified",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-10",
+      "value": 5.4,
+      "time": "05:18",
+      "context": "unspecified",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-11",
+      "value": 5.4,
+      "time": "08:15",
+      "context": "unspecified",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-13",
+      "value": 5,
+      "time": "08:20",
+      "context": "before_breakfast",
+      "notes": "Sebelum sarapan"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-14",
+      "value": 4.7,
+      "time": "",
+      "context": "before_lunch",
+      "notes": "Sarapan: susu metabolic"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-15",
+      "value": 4.8,
+      "time": "",
+      "context": "before_dinner",
+      "notes": "Makan tengah hari: ikan keli bakar, kangkung, nasi 1/4"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-16",
+      "value": 5.4,
+      "time": "",
+      "context": "before_breakfast",
+      "notes": "Makan malam sebelumnya: nasi Korea, daging, sayur, doenjang"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-16",
+      "value": 5.3,
+      "time": "",
+      "context": "after_meal",
+      "notes": "2 jam selepas makan malam: nasi 1/4, telur goreng peria, sweet sour fillet, tauhu ayam cincang; senaman 15 minit"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-19",
+      "value": 5.4,
+      "time": "09:00",
+      "context": "before_breakfast",
+      "notes": "Makan malam sebelumnya: ayam goreng 5 spices, tauge, beras perang dan tauhu"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-20",
+      "value": 5.8,
+      "time": "",
+      "context": "before_lunch",
+      "notes": "Sarapan: susu metabolic 3 sudu; masa asal 12.15am (tidak jelas, perlu semak)"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-21",
+      "value": 5.6,
+      "time": "17:38",
+      "context": "before_dinner",
+      "notes": "Makan tengah hari: ayam tandoori, kacang botol goreng udang, jambu batu"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-22",
+      "value": 5.6,
+      "time": "21:00",
+      "context": "after_meal",
+      "notes": "2 jam selepas makan malam: cauliflower rice, cendawan tumis, telur, tomato ceri, salad campur, rumpai laut, bawang goreng, daun bawang, daun sup, cili merah"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-23",
+      "value": 5.2,
+      "time": "20:10",
+      "context": "before_dinner",
+      "notes": "Makan tengah hari: bufet Majestic Hotel — salmon, ayam, cendawan, sayur, ikan panggang, miang kham, air kosong"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-26",
+      "value": 5.6,
+      "time": "09:40",
+      "context": "before_breakfast",
+      "notes": "Makan malam sebelumnya: beras perang, ayam tandoori, brokoli, telur, tauhu kukus, epal merah"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-27",
+      "value": 5.3,
+      "time": "10:30",
+      "context": "before_lunch",
+      "notes": ""
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-28",
+      "value": 5.5,
+      "time": "",
+      "context": "before_dinner",
+      "notes": "Makan tengah hari: telur, kacang botol, kari kambing"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-09-29",
+      "value": 6.4,
+      "time": "",
+      "context": "after_meal",
+      "notes": "2 jam selepas makan malam: ikan kukus kicap, beras perang, petola"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-10-03",
+      "value": 5.8,
+      "time": "",
+      "context": "before_breakfast",
+      "notes": "Makan malam sebelumnya: herbal broth BMS Organics"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-10-04",
+      "value": 6.3,
+      "time": "12:30",
+      "context": "before_lunch",
+      "notes": "Sarapan 10.30 pagi: susu metabolic, ubat dan suplemen"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-10-05",
+      "value": 5.5,
+      "time": "19:45",
+      "context": "before_dinner",
+      "notes": "Makan tengah hari: 2 telur goreng, salad, beras perang, badam"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-10-06",
+      "value": 5.5,
+      "time": "",
+      "context": "after_meal",
+      "notes": "2 jam selepas makan malam: Kenny Rogers 1/4 ayam lada hitam dan salad, ditambah 1/2 salad Aeon"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-10-10",
+      "value": 5.6,
+      "time": "",
+      "context": "before_breakfast",
+      "notes": "Nota asal: breakfast. Makan malam sebelumnya: sup bayam, bendi, sayap ayam panggang"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-10-11",
+      "value": 6,
+      "time": "12:30",
+      "context": "before_lunch",
+      "notes": "Treadmill 11.50 pagi–12.20 tengah hari (30 minit); sarapan susu metabolic Sauver, suplemen, ubat darah tinggi"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-10-11",
+      "value": 8.3,
+      "time": "11:40",
+      "context": "other",
+      "notes": "Sebelum treadmill; tidak ditandakan sebelum/selepas makan"
+    },
+    {
+      "kind": "glucose",
+      "date": "2026-10-12",
+      "value": 6,
+      "time": "",
+      "context": "before_dinner",
+      "notes": "Tidak sempat makan tengah hari; snek 3 petang: 2 keping roti whole wheat dengan mentega kacang tanpa gula"
+    },
+    {
+      "kind": "weight",
+      "date": "2026-08-22",
+      "value": 75.9,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-08-26",
+      "value": 73,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-08-27",
+      "value": 73,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-08-28",
+      "value": 72.8,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-08-29",
+      "value": 72.3,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-08-30",
+      "value": 72.35,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-08-31",
+      "value": 72.4,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-01",
+      "value": 72.15,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-02",
+      "value": 72.15,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-04",
+      "value": 72.2,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-05",
+      "value": 71.91,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-06",
+      "value": 72,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-07",
+      "value": 72,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-08",
+      "value": 72,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-09",
+      "value": 72,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-10",
+      "value": 71.9,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-11",
+      "value": 71.75,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-13",
+      "value": 71.55,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-14",
+      "value": 71.5,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-15",
+      "value": 71.8,
+      "time": "18:00",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-16",
+      "value": 71.75,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-17",
+      "value": 71.35,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-18",
+      "value": 71.15,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-19",
+      "value": 71.1,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-20",
+      "value": 70.95,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-21",
+      "value": 70.65,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-23",
+      "value": 70.4,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-26",
+      "value": 70.65,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-09-29",
+      "value": 71,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-10-03",
+      "value": 70.5,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-10-04",
+      "value": 70.05,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-10-05",
+      "value": 69.45,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-10-06",
+      "value": 69.75,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-10-10",
+      "value": 69.25,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-10-11",
+      "value": 69.3,
+      "time": "",
+      "context": "",
+      "notes": ""
+    },
+    {
+      "kind": "weight",
+      "date": "2026-10-12",
+      "value": 69.05,
+      "time": "",
+      "context": "",
+      "notes": ""
+    }
+  ]
+}

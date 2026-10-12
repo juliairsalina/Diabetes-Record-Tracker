@@ -1,0 +1,9 @@
+{
+  "name": "Rekod Gula",
+  "short_name": "Rekod Gula",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f8f6",
+  "theme_color": "#157568",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

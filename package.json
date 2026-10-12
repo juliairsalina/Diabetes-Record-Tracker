@@ -1,0 +1,13 @@
+{
+  "name": "rekod-gula",
+  "version": "1.0.0",
+  "description": "Simple family blood glucose tracker with login, signals by age, food & activity diary and printable monthly reports.",
+  "private": true,
+  "main": "server.js",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test"
+  },
+  "license": "MIT"
+}
