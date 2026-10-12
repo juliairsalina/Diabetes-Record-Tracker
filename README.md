@@ -2,19 +2,18 @@
 
 A simple family website for logging blood glucose, food, physical activity and weight. It is built for parents: large buttons, Bahasa Melayu by default (English toggle), and a clear traffic-light signal after every reading.
 
-It is designed **for phones first**. Each person has four bottom tabs:
+It is designed **for phones first**. Each person has three bottom tabs:
 
-- **Hari ini** (Today): the latest reading with its colour signal, one big *Rekod Gula Darah* button, quick buttons for food, activity and weight, and today's records.
-- **Graf** (Charts): the month's average, % in target, and the glucose and weight graphs.
-- **Sejarah** (History): every record for the month, by day. Tap a record to edit or delete it.
-- **Laporan** (Report): the month's summary and the printable report.
+- **Hari ini** (Today): the last reading in big numbers with its colour, one big *Rekod Gula* button, small buttons for food, activity and weight, and today's records.
+- **Graf** (Charts): the month's sugar and weight graphs.
+- **Sejarah** (History): every record for the month by day (tap one to edit), and the printable monthly report.
 
-Forms open as full-screen sheets with only the essentials. Date and time default to *now*; tap *Tukar* to change them.
+The **⋯** menu holds the monthly report, targets and colour meanings, the person's details, backup and settings. Forms open as full-screen sheets with only the essentials. Date and time default to *now*; tap *Tukar* to change them.
 
 ## Features
 
 - **Login.** Family accounts with username and password. Everyone in the family can use the same account on their own phone.
-- **People (profiles).** Add Mak, Ayah and others with name, date of birth and gender. Age is calculated from the birthdate each time, so it updates on every birthday.
+- **People (profiles).** Add Mama, Papa and others with name, date of birth and gender. Age is calculated from the birthdate each time, so it updates on every birthday.
 - **Glucose signal.** Every reading is checked against targets for the person's age group and for when it was taken (before a meal, or 2 hours after):
 
   | Signal | Meaning |
@@ -50,11 +49,15 @@ npm test
 
 Data is stored in `data/rekod.db` (change it with `DATA_DIR` or `DB_FILE`). Back up that file.
 
-### Load the existing record (Aug – Oct 2026)
+### Load Mama's existing record (Aug – Oct 2026)
 
-1. Register, then add the person (e.g. *Mak*).
-2. Open her page → **Sandaran data** → **Import fail sandaran**.
-3. Choose `sample-data/rekod-ibu-ogos-okt-2026.json`.
+Register an account in the app first (for example `julia`), then run:
+
+```bash
+node scripts/add-person.js julia Mama 1974-01-18 female sample-data/rekod-mama-ogos-okt-2026.json
+```
+
+This adds **Mama** (born 18 January 1974, female) with all 77 old sugar and weight records. Or do it in the app: add Mama, then **⋯ → Sandaran data → Import fail sandaran** and choose the same file.
 
 ### Settings (environment variables)
 
