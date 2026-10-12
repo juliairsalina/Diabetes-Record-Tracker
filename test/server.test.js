@@ -3,7 +3,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { createApp } = require('../server.js');
+const { createServer } = require('../server.js');
+const { connect } = require('../lib/app.js');
 
 function client(base) {
   let cookie = '';
@@ -20,7 +21,7 @@ function client(base) {
 }
 
 test('accounts, profiles, entries, import and isolation', async (t) => {
-  const { server } = createApp({ dbFile: ':memory:', allowRegistration: true });
+  const { server } = createServer({ db: connect({ url: ':memory:' }), allowRegistration: true });
   await new Promise((r) => server.listen(0, r));
   t.after(() => server.close());
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -65,4 +66,31 @@ test('accounts, profiles, entries, import and isolation', async (t) => {
   assert.equal((await a('POST', '/api/logout', {})).status, 200);
   assert.equal((await a('GET', '/api/me')).status, 401);
   assert.equal((await a('POST', '/api/login', { username: 'KELUARGA', password: 'rahsia123' })).status, 200);
+});
+
+// Vercel hands the function a rewritten URL (/api?path=…) and may pre-parse the JSON body.
+test('works with Vercel-style requests', async () => {
+  const { createApp } = require('../lib/app.js');
+  const app = createApp({ db: connect({ url: ':memory:' }), allowRegistration: true });
+  const call = (method, url, body, cookie) => new Promise((resolve) => {
+    const headers = {};
+    const res = {
+      statusCode: 200,
+      setHeader: (k, v) => { headers[k.toLowerCase()] = v; },
+      end: (text) => resolve({ status: res.statusCode, headers, data: JSON.parse(text) }),
+    };
+    const req = { method, url, body, headers: { 'content-type': 'application/json', 'x-forwarded-proto': 'https', ...(cookie ? { cookie } : {}) }, socket: {} };
+    app.handle(req, res);
+  });
+  const reg = await call('POST', '/api?path=register', { username: 'vercel', password: 'secret1' });
+  assert.equal(reg.status, 200);
+  assert.match(reg.headers['set-cookie'], /Secure/);
+  const cookie = reg.headers['set-cookie'].split(';')[0];
+  const p = await call('POST', '/api?path=profiles', { name: 'Mama', birthdate: '1974-01-18', gender: 'female' }, cookie);
+  assert.equal(p.status, 200);
+  await call('POST', `/api?path=profiles/${p.data.id}/entries`, { kind: 'glucose', date: '2026-10-12', value: 5.4, context: 'before_breakfast' }, cookie);
+  const list = await call('GET', `/api?path=profiles/${p.data.id}/entries&from=2026-10-01&to=2026-10-31`, undefined, cookie);
+  assert.equal(list.data.length, 1);
+  assert.equal(list.data[0].value, 5.4);
+  assert.equal((await call('GET', '/api?path=nope', undefined, cookie)).status, 404);
 });

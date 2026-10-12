@@ -38,45 +38,77 @@ The **⋯** menu holds the monthly report, targets and colour meanings, the pers
 - **Monthly report.** A printable page with summary, charts and all tables. Use *Cetak / Simpan PDF* to print it or save it as a PDF for the doctor.
 - **Backup.** Download JSON or CSV (opens in Excel). You can import JSON backups, including backups from the old single-page *Rekod Kesihatan Ibu* file.
 
-## Run it
+## Put it online (Vercel + Turso, free)
 
-Requires **Node.js 22.13 or newer**. There are no other dependencies: the database is Node's built-in SQLite.
+The website runs on **Vercel** and saves the data in a **Turso** database. Both have free plans that are enough for a family.
+
+### 1. Create the database on Turso
+
+1. Go to <https://turso.tech> and sign up (you can sign in with GitHub).
+2. Create a database. Name it `rekod-gula` and choose the **Singapore** location (the website runs in Singapore too, so it stays fast).
+3. Open the database and copy its **URL**. It starts with `libsql://`.
+4. Create a **token** for the database (*Create Token*, read & write) and copy it. Keep it secret, because it opens the database.
+
+### 2. Publish on Vercel
+
+1. Merge this work into the `main` branch on GitHub (Vercel publishes `main`).
+2. Go to <https://vercel.com>, sign in with GitHub, then **Add New… → Project** and import `diabetes-record-tracker`.
+3. Leave *Framework Preset* as **Other** and do not change the build settings.
+4. Open **Environment Variables** and add:
+
+   | Name | Value |
+   |---|---|
+   | `TURSO_DATABASE_URL` | the `libsql://…` URL from Turso |
+   | `TURSO_AUTH_TOKEN` | the token from Turso |
+
+5. Press **Deploy**. After about a minute you get a link like `https://diabetes-record-tracker.vercel.app`.
+
+The app creates its tables by itself the first time it runs.
+
+### 3. First use
+
+1. Open the link and tap **Daftar akaun baru** to register the family account.
+2. Tap **+ Tambah orang** and add **Mama** (18/1/1974, Perempuan).
+3. To load Mama's old records, download [`sample-data/rekod-mama-ogos-okt-2026.json`](sample-data/rekod-mama-ogos-okt-2026.json) to the phone or computer, then in the app go to **⋯ → Sandaran data → Import fail sandaran** and choose that file.
+4. **Close sign-ups** so strangers cannot create accounts. In Vercel go to *Settings → Environment Variables*, add `ALLOW_REGISTRATION` = `false`, then *Deployments → ⋯ → Redeploy*.
+5. On each phone, open the link and choose **Add to Home Screen** so it opens like an app.
+
+Every family member can log in with the same account on their own phone.
+
+## Run it on your computer
+
+Requires Node.js 20 or newer.
 
 ```bash
+npm install
 npm start            # http://localhost:3000
 npm test
 ```
 
-Data is stored in `data/rekod.db` (change it with `DATA_DIR` or `DB_FILE`). Back up that file.
-
-### Load Mama's existing record (Aug – Oct 2026)
-
-Register an account in the app first (for example `julia`), then run:
-
-```bash
-node scripts/add-person.js julia Mama 1974-01-18 female sample-data/rekod-mama-ogos-okt-2026.json
-```
-
-This adds **Mama** (born 18 January 1974, female) with all 77 old sugar and weight records. Or do it in the app: add Mama, then **⋯ → Sandaran data → Import fail sandaran** and choose the same file.
+Without the Turso variables, data is stored in a local file, `data/rekod.db`.
 
 ### Settings (environment variables)
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `PORT` | `3000` | HTTP port |
-| `DATA_DIR` | `./data` | Folder for the SQLite database |
-| `ALLOW_REGISTRATION` | `true` | Set to `false` after your family accounts exist, so strangers cannot sign up |
-| `COOKIE_SECURE` | – | Set to `1` to force secure cookies (they are set automatically behind HTTPS proxies) |
+| `TURSO_DATABASE_URL` | – | Turso database URL. If empty, uses the local file in `DATA_DIR` |
+| `TURSO_AUTH_TOKEN` | – | Turso token |
+| `ALLOW_REGISTRATION` | `true` | Set to `false` once your family account exists |
+| `DATA_DIR` | `./data` | Folder for the local database file |
+| `PORT` | `3000` | Port for `npm start` |
 
-## Putting it online
+### Add a person from the command line (optional)
 
-The app needs a small server with a **persistent disk** for the database file. Options:
+This does the same as steps 2–3 above in one go. With the Turso variables set it writes to the live database:
 
-- **Docker** on any VPS: `docker build -t rekod-gula . && docker run -d -p 3000:3000 -v rekod-data:/data -e ALLOW_REGISTRATION=false rekod-gula`
-- **Render / Railway / Fly.io**: deploy this repo as a Node service and attach a persistent volume mounted at `DATA_DIR`.
-- **A home computer or Raspberry Pi** on the family Wi-Fi.
+```bash
+node scripts/add-person.js <username> Mama 1974-01-18 female sample-data/rekod-mama-ogos-okt-2026.json
+```
 
-Always serve it over **HTTPS** when it is on the internet. On a phone, open the site and choose *Add to Home Screen* so it works like an app.
+### Other hosting
+
+The app also runs anywhere that runs Node, for example with the included Dockerfile:
+`docker build -t rekod-gula . && docker run -d -p 3000:3000 -v rekod-data:/data rekod-gula`
 
 ## Disclaimer
 
