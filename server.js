@@ -17,7 +17,7 @@ const SESSION_DAYS = 60;
 const MAX_BODY = 2 * 1024 * 1024;
 
 const KINDS = ['glucose', 'weight', 'food', 'activity'];
-const GLUCOSE_CONTEXTS = ['before_breakfast', 'before_lunch', 'before_dinner', 'after_meal', 'bedtime', 'other', 'unspecified'];
+const GLUCOSE_CONTEXTS = ['before_breakfast', 'before_meal', 'before_lunch', 'before_dinner', 'after_meal', 'bedtime', 'other', 'unspecified'];
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 // ---------- database ----------

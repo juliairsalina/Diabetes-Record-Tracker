@@ -43,20 +43,30 @@ function sv(tag, attrs, ...kids) {
 const pad = (n) => String(n).padStart(2, '0');
 const isoDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const today = () => isoDate(new Date());
+const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return isoDate(d); };
 const nowTime = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 const thisMonth = () => today().slice(0, 7);
 const fmtDate = (s) => { const [y, m, d] = s.split('-'); return `${+d}/${+m}/${y}`; };
+const fmtDayShort = (s) => {
+  if (s === today()) return t('today');
+  if (s === yesterday()) return t('yesterday');
+  const [, m, d] = s.split('-').map(Number);
+  return `${d} ${t('monthsShort')[m - 1]}`;
+};
 const fmtDateLong = (s) => {
   const [y, m, d] = s.split('-').map(Number);
   const wd = t('weekdays')[new Date(y, m - 1, d).getDay()];
-  return `${wd}, ${d} ${t('months')[m - 1]} ${y}`;
+  const prefix = s === today() ? `${t('today')} · ` : s === yesterday() ? `${t('yesterday')} · ` : '';
+  return `${prefix}${wd}, ${d} ${t('months')[m - 1]}`;
 };
 const monthLabel = (m) => { const [y, n] = m.split('-').map(Number); return `${t('months')[n - 1]} ${y}`; };
 const shiftMonth = (m, delta) => { const [y, n] = m.split('-').map(Number); const d = new Date(y, n - 1 + delta, 1); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; };
 const daysIn = (m) => { const [y, n] = m.split('-').map(Number); return new Date(y, n, 0).getDate(); };
 const fmt1 = (v) => Number(v).toFixed(1);
 const genderLabel = (g) => t(g === 'male' ? 'male' : 'female');
+const initial = (name) => name.trim()[0]?.toUpperCase() || '?';
 const LEVEL_ICON = { low: '▼', below: '↓', normal: '✓', above: '↑', high: '▲' };
+const KIND_ICON = { glucose: '🩸', weight: '⚖️', food: '🍽️', activity: '🚶' };
 
 // ---------- API ----------
 
@@ -81,32 +91,33 @@ function toast(msg, kind = '') {
   const el = h('div', { class: `toast ${kind}`, role: 'status' }, msg);
   document.body.append(el);
   setTimeout(() => el.classList.add('show'), 10);
-  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, 3200);
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, 2500);
 }
 
-function modal(title, content, { wide = false } = {}) {
-  const dlg = h('dialog', { class: wide ? 'wide' : '' },
-    h('div', { class: 'modal-head' },
+// Full-height sheet on phones, centred dialog on big screens.
+function sheet(title, content) {
+  const dlg = h('dialog', { class: 'sheet' },
+    h('div', { class: 'sheet-head' },
       h('h2', {}, title),
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('close'), onclick: () => dlg.close() }, '✕')),
-    h('div', { class: 'modal-body' }, content));
+    h('div', { class: 'sheet-body' }, content));
   dlg.addEventListener('close', () => dlg.remove());
   document.body.append(dlg);
   dlg.showModal();
   return dlg;
 }
 
-function signalPill(level, value, { big = false } = {}) {
-  return h('span', { class: `pill ${level}${big ? ' big' : ''}` },
+function signalPill(level, value) {
+  return h('span', { class: `pill ${level}` },
     h('span', { 'aria-hidden': 'true' }, LEVEL_ICON[level]), ' ',
-    value != null ? h('b', {}, fmt1(value)) : null, value != null ? ' ' : null,
+    value != null ? [h('b', {}, fmt1(value)), ' '] : null,
     t('level_' + level));
 }
 
-function chips(name, options, selected, { required = false, onpick } = {}) {
+function chips(name, options, selected, { required = false } = {}) {
   return h('div', { class: 'chips', role: 'radiogroup' }, options.map((o, i) =>
     h('label', { class: 'chip' },
-      h('input', { type: 'radio', name, value: o.value, checked: o.value === selected, required: required && i === 0, onchange: onpick ? () => onpick(o.value) : null }),
+      h('input', { type: 'radio', name, value: o.value, checked: o.value === selected, required: required && i === 0 }),
       h('span', {}, o.icon ? h('span', { class: 'chip-icon', 'aria-hidden': 'true' }, o.icon) : null, o.label))));
 }
 
@@ -120,17 +131,17 @@ function langToggle() {
     h('button', { type: 'button', class: lang === 'en' ? 'on' : '', onclick: () => setLang('en') }, 'EN'));
 }
 
-function topbar(extra) {
-  return h('header', { class: 'topbar noprint' },
-    h('a', { class: 'brand', href: '#/' }, h('span', { class: 'logo', 'aria-hidden': 'true' }, '🩸'), t('appName')),
-    h('div', { class: 'topbar-actions' }, extra, langToggle(),
-      state.me ? h('button', { class: 'btn ghost small', onclick: openSettings, 'aria-label': t('settings') }, '⚙ ', h('span', { class: 'topbar-settings-label' }, t('settings'))) : null));
-}
-
 function download(name, text, mime) {
   const a = h('a', { href: URL.createObjectURL(new Blob([text], { type: mime })), download: name });
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function monthNav(month, onChange) {
+  return h('div', { class: 'month-nav' },
+    h('button', { class: 'round-btn', 'aria-label': t('prevMonth'), onclick: () => onChange(shiftMonth(month, -1)) }, '‹'),
+    h('div', { class: 'month-label' }, monthLabel(month)),
+    h('button', { class: 'round-btn', 'aria-label': t('nextMonth'), disabled: month >= thisMonth(), onclick: () => onChange(shiftMonth(month, 1)) }, '›'));
 }
 
 // ---------- login / register ----------
@@ -140,7 +151,7 @@ function renderLogin(root) {
   const err = h('p', { class: 'error', role: 'alert' });
   const form = h('form', { class: 'stack' });
   const draw = () => {
-    form.replaceChildren(
+    form.replaceChildren(...[
       mode === 'register' ? field(t('yourName'), h('input', { name: 'display_name', autocomplete: 'name', placeholder: t('yourNameEg') })) : null,
       field(t('username'), h('input', { name: 'username', required: true, autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false' }), mode === 'register' ? t('usernameHint') : null),
       field(t('password'), h('input', { name: 'password', type: 'password', required: true, minlength: mode === 'register' ? 6 : null, autocomplete: mode === 'register' ? 'new-password' : 'current-password' }), mode === 'register' ? t('passwordHint') : null),
@@ -149,14 +160,14 @@ function renderLogin(root) {
       state.config.allowRegistration ? h('p', { class: 'center muted' },
         mode === 'login' ? t('noAccount') : t('haveAccount'), ' ',
         h('button', { type: 'button', class: 'link', onclick: () => { mode = mode === 'login' ? 'register' : 'login'; err.textContent = ''; draw(); } },
-          mode === 'login' ? t('register') : t('login'))) : null);
+          mode === 'login' ? t('register') : t('login'))) : null,
+    ].filter(Boolean));
   };
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     err.textContent = '';
-    const body = Object.fromEntries(new FormData(form));
     try {
-      state.me = await api('POST', mode === 'login' ? '/api/login' : '/api/register', body);
+      state.me = await api('POST', mode === 'login' ? '/api/login' : '/api/register', Object.fromEntries(new FormData(form)));
       location.hash = '#/';
     } catch (e) { err.textContent = e.message; }
   });
@@ -164,134 +175,194 @@ function renderLogin(root) {
   root.replaceChildren(
     h('div', { class: 'login-wrap' },
       h('div', { class: 'login-lang' }, langToggle()),
-      h('div', { class: 'card login-card' },
-        h('div', { class: 'login-logo', 'aria-hidden': 'true' }, '🩸'),
-        h('h1', { class: 'center' }, t('appName')),
-        h('p', { class: 'center muted' }, t('tagline')),
-        form)));
+      h('div', { class: 'login-logo', 'aria-hidden': 'true' }, '🩸'),
+      h('h1', { class: 'center' }, t('appName')),
+      h('p', { class: 'center muted' }, t('tagline')),
+      form));
 }
 
 // ---------- home: list of people ----------
 
 async function renderHome(root) {
   const profiles = await api('GET', '/api/profiles');
-  const list = h('div', { class: 'people' },
-    profiles.map((p) => {
-      const age = ageOn(p.birthdate);
-      const last = p.last_glucose;
-      const sig = last ? classify(last.value, last.context, targetsFor(p)) : null;
-      return h('a', { class: 'card person', href: `#/p/${p.id}` },
-        h('div', { class: `avatar ${p.gender}`, 'aria-hidden': 'true' }, p.name.trim()[0]?.toUpperCase() || '?'),
-        h('div', { class: 'person-main' },
-          h('div', { class: 'person-name' }, p.name),
-          h('div', { class: 'muted' }, t('yearsOld', { n: age }), ' · ', genderLabel(p.gender)),
-          last ? h('div', { class: 'person-last' }, signalPill(sig.level, last.value), h('span', { class: 'muted small' }, ' ', fmtDate(last.date), last.time ? ' ' + last.time : ''))
-            : h('div', { class: 'muted small' }, t('noReadingsYet'))),
-        h('span', { class: 'chev', 'aria-hidden': 'true' }, '›'));
-    }),
-    h('button', { class: 'card person add', onclick: () => openProfileForm() },
-      h('div', { class: 'avatar add', 'aria-hidden': 'true' }, '+'),
-      h('div', { class: 'person-main' }, h('div', { class: 'person-name' }, t('addPerson')), h('div', { class: 'muted' }, t('addPersonHint')))));
-  root.replaceChildren(topbar(),
-    h('main', { class: 'shell' },
-      h('h1', {}, t('hello', { name: state.me.display_name })),
-      h('p', { class: 'lead muted' }, profiles.length ? t('whoToday') : t('startByAdding')),
-      list,
-      h('section', { class: 'card info' }, h('h3', {}, 'ℹ ', t('signalExplainTitle')), legendRow(), h('p', { class: 'small muted' }, t('signalExplain')))));
+  root.replaceChildren(
+    h('header', { class: 'bar' },
+      h('div', { class: 'bar-title' }, '🩸 ', t('appName')),
+      h('button', { class: 'icon-btn', 'aria-label': t('settings'), onclick: openSettings }, '⚙')),
+    h('main', { class: 'page' },
+      h('p', { class: 'lead' }, profiles.length ? t('whoToday') : t('startByAdding')),
+      h('div', { class: 'people' },
+        profiles.map((p) => {
+          const last = p.last_glucose;
+          const sig = last ? classify(last.value, last.context, targetsFor(p)) : null;
+          return h('a', { class: 'person', href: `#/p/${p.id}` },
+            h('div', { class: `avatar ${p.gender}`, 'aria-hidden': 'true' }, initial(p.name)),
+            h('div', { class: 'person-main' },
+              h('div', { class: 'person-name' }, p.name),
+              last ? h('div', {}, signalPill(sig.level, last.value)) : h('div', { class: 'muted small' }, t('noReadingsYet'))),
+            h('span', { class: 'chev', 'aria-hidden': 'true' }, '›'));
+        })),
+      h('button', { class: 'btn ghost block add-person', onclick: () => openProfileForm() }, '+ ', t('addPerson'))));
 }
 
-function legendRow() {
-  return h('div', { class: 'legend-row' }, ['low', 'below', 'normal', 'above', 'high'].map((l) => signalPill(l)));
+// ---------- person pages (bottom tabs) ----------
+
+const TABS = [
+  { id: '', icon: '🏠', label: 'tabToday' },
+  { id: 'graf', icon: '📈', label: 'tabChart' },
+  { id: 'sejarah', icon: '📋', label: 'tabHistory' },
+  { id: 'laporan', icon: '🖨️', label: 'tabReport' },
+];
+
+function personShell(p, tab, content) {
+  return [
+    h('header', { class: 'bar' },
+      h('a', { class: 'icon-btn', href: '#/', 'aria-label': t('allPeople') }, '‹'),
+      h('div', { class: 'bar-title' },
+        h('span', { class: `avatar xs ${p.gender}`, 'aria-hidden': 'true' }, initial(p.name)),
+        h('span', { class: 'bar-name' }, p.name),
+        h('span', { class: 'bar-sub' }, t('yearsOld', { n: ageOn(p.birthdate) }))),
+      h('button', { class: 'icon-btn', 'aria-label': t('more'), onclick: () => openPersonMenu(p) }, '⋯')),
+    h('main', { class: 'page with-tabs' }, content),
+    h('nav', { class: 'tabs', 'aria-label': t('menu') }, TABS.map((tb) =>
+      h('a', { class: `tab${tb.id === tab ? ' on' : ''}`, href: `#/p/${p.id}${tb.id ? '/' + tb.id : ''}`, 'aria-current': tb.id === tab ? 'page' : null },
+        h('span', { class: 'tab-icon', 'aria-hidden': 'true' }, tb.icon), h('span', {}, t(tb.label))))),
+  ];
 }
 
-// ---------- person dashboard ----------
+const loadMonth = (id, month) => api('GET', `/api/profiles/${id}/entries?from=${month}-01&to=${month}-31`);
+const changeMonth = (m) => { state.month = m; render(); };
 
-async function renderPerson(root, id) {
-  const month = state.month;
-  const [p, entries] = await Promise.all([
-    api('GET', `/api/profiles/${id}`),
-    api('GET', `/api/profiles/${id}/entries?from=${month}-01&to=${month}-31`),
-  ]);
+async function renderToday(root, id) {
+  const [p, entries] = await Promise.all([api('GET', `/api/profiles/${id}`), api('GET', `/api/profiles/${id}/entries?from=${today()}&to=${today()}`)]);
   const targets = targetsFor(p);
-  const age = ageOn(p.birthdate);
-  const stats = computeStats(entries, targets);
-
-  const actions = h('div', { class: 'actions-grid' },
-    actionBtn('🩸', t('addGlucose'), 'glucose', () => openEntry(p, 'glucose')),
-    actionBtn('🍽️', t('addFood'), 'food', () => openEntry(p, 'food')),
-    actionBtn('🚶', t('addActivity'), 'activity', () => openEntry(p, 'activity')),
-    actionBtn('⚖️', t('addWeight'), 'weight', () => openEntry(p, 'weight')));
-
-  const monthNav = h('div', { class: 'month-nav' },
-    h('button', { class: 'btn ghost', 'aria-label': t('prevMonth'), onclick: () => { state.month = shiftMonth(month, -1); render(); } }, '‹'),
-    h('div', { class: 'month-label' }, monthLabel(month)),
-    h('button', { class: 'btn ghost', 'aria-label': t('nextMonth'), disabled: month >= thisMonth(), onclick: () => { state.month = shiftMonth(month, 1); render(); } }, '›'),
-    h('a', { class: 'btn secondary', href: `#/p/${p.id}/report/${month}` }, '🖨 ', t('monthlyReport')));
-
-  const glucose = entries.filter((e) => e.kind === 'glucose');
-  const weight = entries.filter((e) => e.kind === 'weight');
-
-  root.replaceChildren(topbar(),
-    h('main', { class: 'shell' },
-      h('a', { class: 'back', href: '#/' }, '← ', t('allPeople')),
-      h('div', { class: 'person-head' },
-        h('div', { class: `avatar lg ${p.gender}`, 'aria-hidden': 'true' }, p.name.trim()[0]?.toUpperCase() || '?'),
-        h('div', {}, h('h1', {}, p.name), h('div', { class: 'muted' }, t('yearsOld', { n: age }), ' · ', genderLabel(p.gender), ' · ', t('born'), ' ', fmtDate(p.birthdate))),
-        h('div', { class: 'person-head-actions' },
-          h('button', { class: 'btn ghost small', onclick: () => openProfileForm(p) }, '✎ ', t('editPerson')),
-          h('button', { class: 'btn ghost small', onclick: () => openDataTools(p) }, '⇅ ', t('backup')))),
-      latestCard(p, targets),
-      actions,
-      monthNav,
-      h('div', { class: 'stats' },
-        statTile(t('statAverage'), stats.avg != null ? fmt1(stats.avg) : '—', 'mmol/L', t('statReadings', { n: stats.count })),
-        statTile(t('statInTarget'), stats.count ? `${stats.pctInTarget}%` : '—', '', stats.count ? t('statInTargetDetail', { a: stats.levels.normal, b: stats.count }) : t('noData')),
-        statTile(t('statActivity'), String(stats.activityMin), t('minutes'), t('statSessions', { n: stats.activityCount })),
-        statTile(t('statWeight'), stats.weightLast != null ? stats.weightLast.toFixed(1) : '—', 'kg', stats.weightChange != null ? t('statWeightChange', { v: (stats.weightChange > 0 ? '+' : '') + stats.weightChange.toFixed(2) }) : t('noData'))),
-      h('section', { class: 'card' },
-        h('h2', {}, t('glucoseTrend')),
-        glucose.length ? glucoseChart(glucose, targets, month) : h('p', { class: 'empty' }, t('noGlucoseMonth')),
-        glucose.length ? chartLegend(targets) : null),
-      weight.length ? h('section', { class: 'card' }, h('h2', {}, t('weightTrend')), weightChart(weight, month)) : null,
-      targetsBox(p, targets, age),
-      h('section', { class: 'card' },
-        h('h2', {}, t('diary'), ' — ', monthLabel(month)),
-        entries.length ? diary(p, entries, targets) : h('p', { class: 'empty' }, t('noEntriesMonth')))));
+  root.replaceChildren(...personShell(p, '', [
+    latestCard(p, targets),
+    h('button', { class: 'big-action', onclick: () => openEntry(p, 'glucose') },
+      h('span', { class: 'big-action-icon', 'aria-hidden': 'true' }, '🩸'), t('addGlucose')),
+    h('div', { class: 'small-actions' },
+      smallAction('🍽️', t('addFood'), () => openEntry(p, 'food')),
+      smallAction('🚶', t('addActivity'), () => openEntry(p, 'activity')),
+      smallAction('⚖️', t('addWeight'), () => openEntry(p, 'weight'))),
+    h('h2', { class: 'section-title' }, t('todayRecords')),
+    entries.length ? entryList(p, entries, targets) : h('p', { class: 'empty' }, t('nothingToday')),
+  ]));
 }
 
-function actionBtn(icon, label, kind, onclick) {
-  return h('button', { class: `action ${kind}`, onclick }, h('span', { class: 'action-icon', 'aria-hidden': 'true' }, icon), h('span', {}, label));
-}
-
-function statTile(label, value, unit, detail) {
-  return h('div', { class: 'card stat' }, h('div', { class: 'stat-label' }, label), h('div', { class: 'stat-value' }, value, unit ? h('span', {}, ' ', unit) : null), h('div', { class: 'small muted' }, detail));
+function smallAction(icon, label, onclick) {
+  return h('button', { class: 'small-action', onclick }, h('span', { class: 'small-action-icon', 'aria-hidden': 'true' }, icon), h('span', {}, label));
 }
 
 function latestCard(p, targets) {
   const last = p.last_glucose;
-  if (!last) {
-    return h('section', { class: 'card latest none' }, h('div', {}, h('div', { class: 'latest-label' }, t('latestReading')), h('div', { class: 'latest-value' }, '—')), h('p', { class: 'muted' }, t('noReadingsYetLong')));
-  }
+  if (!last) return h('section', { class: 'latest none' }, h('div', { class: 'latest-label' }, t('latestReading')), h('p', {}, t('noReadingsYetLong')));
   const sig = classify(last.value, last.context, targets);
-  return h('section', { class: `card latest ${sig.level}` },
-    h('div', { class: 'latest-left' },
-      h('div', { class: 'latest-label' }, t('latestReading')),
-      h('div', { class: 'latest-value' }, fmt1(last.value), h('span', {}, ' mmol/L')),
-      h('div', { class: 'muted' }, t('ctx_' + last.context), ' · ', fmtDate(last.date), last.time ? ' ' + last.time : '')),
-    h('div', { class: 'latest-right' },
-      h('div', { class: 'latest-signal' }, h('span', { 'aria-hidden': 'true' }, LEVEL_ICON[sig.level]), ' ', t('level_' + sig.level)),
-      h('p', {}, t('advice_' + sig.level)),
-      h('p', { class: 'small muted' }, t('targetWas', { min: fmt1(sig.range.min), max: fmt1(sig.range.max) }))));
+  return h('section', { class: `latest ${sig.level}` },
+    h('div', { class: 'latest-label' }, t('latestReading'), ' · ', fmtDayShort(last.date), last.time ? ' ' + last.time : ''),
+    h('div', { class: 'latest-row' },
+      h('div', { class: 'latest-value' }, fmt1(last.value), h('span', {}, 'mmol/L')),
+      h('div', { class: 'latest-signal' }, h('span', { class: 'latest-icon', 'aria-hidden': 'true' }, LEVEL_ICON[sig.level]), t('level_' + sig.level))),
+    h('div', { class: 'latest-ctx' }, t('ctx_' + last.context)),
+    sig.level !== 'normal' ? h('p', { class: 'latest-advice' }, t('advice_' + sig.level)) : null);
 }
 
-function targetsBox(p, targets, age) {
-  return h('section', { class: 'card info' },
-    h('h3', {}, '🎯 ', t('targetsFor', { name: p.name })),
-    h('div', { class: 'target-grid' },
-      h('div', {}, h('div', { class: 'muted small' }, t('beforeMeals')), h('b', {}, `${fmt1(targets.beforeMin)} – ${fmt1(targets.beforeMax)}`), ' mmol/L'),
-      h('div', {}, h('div', { class: 'muted small' }, t('afterMeals')), h('b', {}, `${t('upTo')} ${fmt1(targets.afterMax)}`), ' mmol/L'),
-      h('div', {}, h('div', { class: 'muted small' }, t('lowBelow')), h('b', {}, `< ${fmt1(LOW)}`), ' mmol/L')),
-    h('p', { class: 'small muted' }, targets.custom ? t('targetsCustom') : t('targetsDefault', { group: t('group_' + targets.group), age })));
+async function renderChart(root, id) {
+  const month = state.month;
+  const [p, entries] = await Promise.all([api('GET', `/api/profiles/${id}`), loadMonth(id, month)]);
+  const targets = targetsFor(p);
+  const s = computeStats(entries, targets);
+  const glucose = entries.filter((e) => e.kind === 'glucose');
+  const weight = entries.filter((e) => e.kind === 'weight');
+  root.replaceChildren(...personShell(p, 'graf', [
+    monthNav(month, changeMonth),
+    h('div', { class: 'tiles' },
+      tile(t('statAverage'), s.avg != null ? fmt1(s.avg) : '—', 'mmol/L'),
+      tile(t('statInTarget'), s.count ? `${s.pctInTarget}%` : '—', s.count ? t('ofReadings', { a: s.levels.normal, b: s.count }) : '')),
+    h('section', { class: 'card' },
+      h('h2', {}, t('glucoseTrend')),
+      glucose.length ? [glucoseChart(glucose, targets, month), chartLegend(targets)] : h('p', { class: 'empty' }, t('noGlucoseMonth'))),
+    h('section', { class: 'card' },
+      h('h2', {}, t('weightTrend')),
+      weight.length ? [
+        h('p', { class: 'muted small' }, `${t('statWeight')}: `, h('b', {}, `${s.weightLast.toFixed(1)} kg`),
+          s.weightChange != null ? ` (${s.weightChange > 0 ? '+' : ''}${s.weightChange.toFixed(1)} kg ${t('thisMonth')})` : ''),
+        weightChart(weight, month),
+      ] : h('p', { class: 'empty' }, t('noWeightMonth'))),
+    targetsNote(p, targets),
+  ]));
+}
+
+function tile(label, value, sub) {
+  return h('div', { class: 'tile' }, h('div', { class: 'tile-label' }, label), h('div', { class: 'tile-value' }, value), sub ? h('div', { class: 'tile-sub' }, sub) : null);
+}
+
+function targetsNote(p, targets) {
+  return h('details', { class: 'card note' },
+    h('summary', {}, '🎯 ', t('targetsFor', { name: p.name })),
+    h('ul', { class: 'target-list' },
+      h('li', {}, t('beforeMeals'), ': ', h('b', {}, `${fmt1(targets.beforeMin)} – ${fmt1(targets.beforeMax)}`)),
+      h('li', {}, t('afterMeals'), ': ', h('b', {}, `${t('upTo')} ${fmt1(targets.afterMax)}`)),
+      h('li', {}, t('lowBelow'), ': ', h('b', {}, `< ${fmt1(LOW)}`))),
+    h('div', { class: 'legend-row' }, ['low', 'below', 'normal', 'above', 'high'].map((l) => signalPill(l))),
+    h('p', { class: 'small muted' }, targets.custom ? t('targetsCustom') : t('targetsDefault', { group: t('group_' + targets.group), age: ageOn(p.birthdate) })));
+}
+
+async function renderHistory(root, id) {
+  const month = state.month;
+  const [p, entries] = await Promise.all([api('GET', `/api/profiles/${id}`), loadMonth(id, month)]);
+  const targets = targetsFor(p);
+  const byDate = new Map();
+  entries.forEach((e) => { if (!byDate.has(e.date)) byDate.set(e.date, []); byDate.get(e.date).push(e); });
+  root.replaceChildren(...personShell(p, 'sejarah', [
+    monthNav(month, changeMonth),
+    entries.length ? [...byDate].map(([date, list]) => h('section', { class: 'day' },
+      h('h3', { class: 'day-title' }, fmtDateLong(date)),
+      entryList(p, list, targets))) : h('p', { class: 'empty' }, t('noEntriesMonth')),
+  ]));
+}
+
+async function renderReportTab(root, id) {
+  const month = state.month;
+  const [p, entries] = await Promise.all([api('GET', `/api/profiles/${id}`), loadMonth(id, month)]);
+  const s = computeStats(entries, targetsFor(p));
+  const row = (label, value) => h('div', { class: 'sum-row' }, h('span', {}, label), h('b', {}, value));
+  root.replaceChildren(...personShell(p, 'laporan', [
+    monthNav(month, changeMonth),
+    h('section', { class: 'card' },
+      row(t('statReadingsTitle'), String(s.count)),
+      row(t('statAverage'), s.avg != null ? `${fmt1(s.avg)} mmol/L` : '—'),
+      row(t('statInTarget'), s.count ? `${s.pctInTarget}%` : '—'),
+      row(t('lowestHighest'), s.count ? `${fmt1(s.min)} / ${fmt1(s.max)}` : '—'),
+      row(t('statActivity'), `${s.activityMin} ${t('minutes')}`),
+      row(t('statFood'), String(s.foodCount)),
+      row(t('statWeight'), s.weightLast != null ? `${s.weightLast.toFixed(1)} kg` : '—')),
+    h('a', { class: 'big-action', href: `#/p/${p.id}/report/${month}` }, h('span', { class: 'big-action-icon', 'aria-hidden': 'true' }, '🖨️'), t('openReport')),
+    h('p', { class: 'muted small center' }, t('reportHint')),
+  ]));
+}
+
+// ---------- entries list (tap a row to edit) ----------
+
+function entryText(e) {
+  if (e.kind === 'glucose') return [h('b', { class: 'num' }, fmt1(e.value)), ' ', h('span', { class: 'unit' }, 'mmol/L')];
+  if (e.kind === 'weight') return [h('b', { class: 'num' }, e.value.toFixed(1)), ' ', h('span', { class: 'unit' }, 'kg')];
+  if (e.kind === 'food') return [h('b', {}, t('meal_' + e.context)), ' · ', e.description];
+  return [h('b', {}, e.description), e.duration ? ` · ${e.duration} ${t('min')}` : ''];
+}
+
+function entryList(p, list, targets) {
+  return h('div', { class: 'entries' }, list.map((e) => {
+    const sig = e.kind === 'glucose' ? classify(e.value, e.context, targets) : null;
+    const sub = e.kind === 'glucose' ? [t('ctx_' + e.context), e.notes ? ` · ${e.notes}` : ''] : e.notes;
+    return h('button', { class: 'entry', onclick: () => openEntry(p, e.kind, e) },
+      h('span', { class: 'entry-icon', 'aria-hidden': 'true' }, KIND_ICON[e.kind]),
+      h('span', { class: 'entry-body' },
+        h('span', { class: 'entry-line' }, entryText(e)),
+        sub && sub.length ? h('span', { class: 'entry-sub' }, sub) : null),
+      h('span', { class: 'entry-right' },
+        sig ? h('span', { class: `dot-sig ${sig.level}` }, LEVEL_ICON[sig.level], ' ', t('level_' + sig.level)) : null,
+        h('span', { class: 'entry-time' }, e.time || '')));
+  }));
 }
 
 // ---------- stats ----------
@@ -313,10 +384,8 @@ function computeStats(entries, targets) {
     min: vals.length ? Math.min(...vals) : null,
     max: vals.length ? Math.max(...vals) : null,
     pctInTarget: g.length ? Math.round((levels.normal / g.length) * 100) : 0,
-    weightFirst: w.length ? w[0].value : null,
     weightLast: w.length ? w.at(-1).value : null,
     weightChange: w.length > 1 ? w.at(-1).value - w[0].value : null,
-    weightCount: w.length,
     activityMin: acts.reduce((a, e) => a + (e.duration || 0), 0),
     activityCount: acts.length,
     foodCount: entries.filter((e) => e.kind === 'food').length,
@@ -332,9 +401,9 @@ function monthX(e, month) {
   return (day - 1 + (hh * 60 + mm) / 1440) / daysIn(month);
 }
 
-function chartFrame({ points, yMin, yMax, yStep, month, band, refLines = [], unit, compact = false }) {
-  // a narrower drawing on phones keeps the axis text readable
-  const W = !compact && window.innerWidth < 600 ? 380 : 640, H = compact ? 200 : 260, L = 40, R = 14, T = 14, B = 30;
+function chartFrame({ points, yMin, yMax, yStep, month, band, refLines = [], print = false }) {
+  // Drawn at phone proportions so text stays readable; the report uses a wide version.
+  const W = print ? 640 : 360, H = print ? 200 : 230, L = 30, R = 8, T = 10, B = 26;
   const x = (f) => L + f * (W - L - R);
   const y = (v) => T + (1 - (v - yMin) / (yMax - yMin)) * (H - T - B);
   const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'chart', role: 'img', 'aria-label': t('chartAria') });
@@ -342,20 +411,18 @@ function chartFrame({ points, yMin, yMax, yStep, month, band, refLines = [], uni
   if (band) svg.append(sv('rect', { x: L, width: W - L - R, y: y(band.max), height: y(band.min) - y(band.max), class: 'band' }));
   for (let v = yMin; v <= yMax + 1e-9; v += yStep) {
     svg.append(sv('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), class: 'grid' }),
-      sv('text', { x: L - 8, y: y(v) + 4, 'text-anchor': 'end', class: 'tick' }, Number.isInteger(yStep) ? String(v) : v.toFixed(1)));
+      sv('text', { x: L - 6, y: y(v) + 4, 'text-anchor': 'end', class: 'tick' }, Number.isInteger(yStep) ? String(v) : v.toFixed(1)));
   }
-  refLines.forEach((r) => svg.append(
-    sv('line', { x1: L, x2: W - R, y1: y(r.v), y2: y(r.v), class: `ref ${r.cls}` }),
-    sv('text', { x: W - R - 4, y: y(r.v) - 5, 'text-anchor': 'end', class: `ref-label ${r.cls}` }, r.label)));
+  refLines.forEach((r) => svg.append(sv('line', { x1: L, x2: W - R, y1: y(r.v), y2: y(r.v), class: `ref ${r.cls}` })));
   const days = daysIn(month);
-  [1, 5, 10, 15, 20, 25, days].forEach((d) => svg.append(sv('text', { x: x((d - 0.5) / days), y: H - 8, 'text-anchor': 'middle', class: 'tick' }, String(d))));
+  [1, 10, 20, days].forEach((d) => svg.append(sv('text', { x: x((d - 0.5) / days), y: H - 7, 'text-anchor': 'middle', class: 'tick' }, String(d))));
 
   const pts = points.map((p) => ({ ...p, px: x(p.x), py: y(p.v) }));
   if (pts.length > 1) svg.append(sv('polyline', { points: pts.map((p) => `${p.px},${p.py}`).join(' '), class: 'trend' }));
-  pts.forEach((p) => svg.append(sv('circle', { cx: p.px, cy: p.py, r: compact ? 4 : 5.5, class: `dot ${p.cls || ''}` })));
+  pts.forEach((p) => svg.append(sv('circle', { cx: p.px, cy: p.py, r: pts.length > 40 ? 3.5 : 4.5, class: `dot ${p.cls || ''}` })));
 
   const wrap = h('div', { class: 'chart-wrap' }, svg);
-  if (!compact) attachTooltip(wrap, svg, pts, W);
+  if (!print) attachTooltip(wrap, svg, pts, W);
   return wrap;
 }
 
@@ -369,38 +436,34 @@ function attachTooltip(wrap, svg, pts, W) {
     const sx = ((ev.clientX - r.left) / r.width) * W;
     let best = null, bd = Infinity;
     pts.forEach((p) => { const d = Math.abs(p.px - sx); if (d < bd) { bd = d; best = p; } });
-    if (!best || bd > 40) { tip.hidden = true; hair.setAttribute('visibility', 'hidden'); return; }
+    if (!best || bd > 30) { tip.hidden = true; hair.setAttribute('visibility', 'hidden'); return; }
     hair.setAttribute('x1', best.px); hair.setAttribute('x2', best.px); hair.setAttribute('visibility', 'visible');
-    tip.replaceChildren(h('div', { class: 'tip-value' }, best.valueText), ...best.lines.map((l) => h('div', { class: 'tip-line' }, l)));
+    tip.replaceChildren(h('div', { class: 'tip-value' }, best.valueText), ...best.lines.map((l) => h('div', {}, l)));
     tip.hidden = false;
-    const left = (best.px / W) * r.width;
-    tip.style.left = `${Math.min(Math.max(left, 80), r.width - 80)}px`;
+    tip.style.left = `${Math.min(Math.max((best.px / W) * r.width, 90), r.width - 90)}px`;
   };
   svg.addEventListener('pointermove', move);
   svg.addEventListener('pointerdown', move);
   svg.addEventListener('pointerleave', () => { tip.hidden = true; hair.setAttribute('visibility', 'hidden'); });
 }
 
-function glucoseChart(list, targets, month, compact = false) {
+function glucoseChart(list, targets, month, print = false) {
   const sorted = [...list].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const vals = sorted.map((e) => e.value);
   const yMin = Math.max(0, Math.floor(Math.min(3, ...vals) - 0.5));
   const yMax = Math.ceil(Math.max(targets.afterMax + 2, ...vals) + 0.5);
   return chartFrame({
-    month, compact, unit: 'mmol/L', yMin, yMax, yStep: yMax - yMin > 12 ? 4 : 2,
+    month, print, yMin, yMax, yStep: yMax - yMin > 12 ? 4 : 2,
     band: { min: targets.beforeMin, max: targets.beforeMax },
-    refLines: [
-      { v: targets.afterMax, cls: 'after', label: t('chartAfterLimit', { v: fmt1(targets.afterMax) }) },
-      { v: LOW, cls: 'low', label: t('chartLow', { v: fmt1(LOW) }) },
-    ],
+    refLines: [{ v: targets.afterMax, cls: 'after' }, { v: LOW, cls: 'low' }],
     points: sorted.map((e) => {
       const s = classify(e.value, e.context, targets);
-      return { x: monthX(e, month), v: e.value, cls: s.level, valueText: `${fmt1(e.value)} mmol/L · ${t('level_' + s.level)}`, lines: [`${fmtDate(e.date)}${e.time ? ' ' + e.time : ''}`, t('ctx_' + e.context)] };
+      return { x: monthX(e, month), v: e.value, cls: s.level, valueText: `${fmt1(e.value)} · ${t('level_' + s.level)}`, lines: [`${fmtDate(e.date)}${e.time ? ' ' + e.time : ''}`, t('ctx_' + e.context)] };
     }),
   });
 }
 
-function weightChart(list, month, compact = false) {
+function weightChart(list, month, print = false) {
   const sorted = [...list].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const vals = sorted.map((e) => e.value);
   let lo = Math.min(...vals), hi = Math.max(...vals);
@@ -409,8 +472,8 @@ function weightChart(list, month, compact = false) {
   lo = Math.floor((lo - span * 0.2) / step) * step;
   hi = Math.ceil((hi + span * 0.2) / step) * step;
   return chartFrame({
-    month, compact, unit: 'kg', yMin: lo, yMax: hi, yStep: step,
-    points: sorted.map((e) => ({ x: monthX(e, month), v: e.value, cls: 'weight', valueText: `${e.value.toFixed(2)} kg`, lines: [fmtDate(e.date) + (e.time ? ' ' + e.time : '')] })),
+    month, print, yMin: lo, yMax: hi, yStep: step,
+    points: sorted.map((e) => ({ x: monthX(e, month), v: e.value, cls: 'weight', valueText: `${e.value.toFixed(2)} kg`, lines: [fmtDate(e.date)] })),
   });
 }
 
@@ -418,46 +481,29 @@ function chartLegend(targets) {
   return h('div', { class: 'chart-legend' },
     h('span', {}, h('i', { class: 'key band' }), t('legendBand', { min: fmt1(targets.beforeMin), max: fmt1(targets.beforeMax) })),
     h('span', {}, h('i', { class: 'key after' }), t('legendAfter', { v: fmt1(targets.afterMax) })),
-    h('span', {}, h('i', { class: 'key low' }), t('legendLow')),
-    h('span', { class: 'muted' }, t('legendDots')));
-}
-
-// ---------- diary ----------
-
-function entryMain(e) {
-  if (e.kind === 'glucose') return h('span', {}, h('b', { class: 'big-num' }, fmt1(e.value)), ' mmol/L · ', t('ctx_' + e.context));
-  if (e.kind === 'weight') return h('span', {}, h('b', { class: 'big-num' }, e.value.toFixed(2)), ' kg');
-  if (e.kind === 'food') return h('span', {}, h('b', {}, t('meal_' + e.context)), ': ', e.description);
-  return h('span', {}, h('b', {}, e.description), e.duration ? ` · ${e.duration} ${t('minutes')}` : '');
-}
-const KIND_ICON = { glucose: '🩸', weight: '⚖️', food: '🍽️', activity: '🚶' };
-
-function diary(p, entries, targets) {
-  const byDate = new Map();
-  entries.forEach((e) => { if (!byDate.has(e.date)) byDate.set(e.date, []); byDate.get(e.date).push(e); });
-  return h('div', { class: 'diary' }, [...byDate].map(([date, list]) =>
-    h('div', { class: 'day' },
-      h('h3', { class: 'day-title' }, fmtDateLong(date)),
-      list.map((e) => h('div', { class: `entry ${e.kind}` },
-        h('span', { class: 'entry-icon', 'aria-hidden': 'true' }, KIND_ICON[e.kind]),
-        h('span', { class: 'entry-time' }, e.time || '—'),
-        h('div', { class: 'entry-main' },
-          entryMain(e),
-          e.kind === 'glucose' ? h('div', {}, signalPill(classify(e.value, e.context, targets).level)) : null,
-          e.notes ? h('div', { class: 'muted small' }, e.notes) : null),
-        h('div', { class: 'entry-actions' },
-          h('button', { class: 'btn ghost small', onclick: () => openEntry(p, e.kind, e) }, t('edit'))))))));
+    h('span', {}, h('i', { class: 'key low' }), t('legendLow')));
 }
 
 // ---------- forms ----------
 
-const GLUCOSE_CTX = ['before_breakfast', 'before_lunch', 'before_dinner', 'after_meal', 'bedtime', 'other'];
+const GLUCOSE_CTX = ['before_breakfast', 'before_meal', 'after_meal', 'other'];
 const MEALS = [['breakfast', '🌅'], ['lunch', '☀️'], ['dinner', '🌙'], ['snack', '🍎']];
 const ACTIVITIES = ['walk', 'treadmill', 'exercise', 'cycling', 'gardening', 'swimming'];
 
 function guessMeal() {
   const hr = new Date().getHours();
   return hr < 11 ? 'breakfast' : hr < 16 ? 'lunch' : hr < 22 ? 'dinner' : 'snack';
+}
+
+// "Today, 11:12 — Change" line; the date and time inputs stay hidden until asked for.
+function whenField(e) {
+  const date = h('input', { name: 'date', type: 'date', required: true, max: today(), value: e.date });
+  const time = h('input', { name: 'time', type: 'time', value: e.time });
+  const inputs = h('div', { class: 'row2', hidden: true }, field(t('date'), date), field(t('time'), time));
+  const label = h('span', {}, `📅 ${fmtDayShort(e.date)}${e.time ? ', ' + e.time : ''}`);
+  const btn = h('button', { type: 'button', class: 'link', onclick: () => { inputs.hidden = false; summary.hidden = true; } }, t('change'));
+  const summary = h('div', { class: 'when-line' }, label, btn);
+  return h('div', {}, summary, inputs);
 }
 
 function openEntry(p, kind, entry) {
@@ -467,42 +513,46 @@ function openEntry(p, kind, entry) {
   const parts = [];
 
   if (kind === 'glucose') {
+    // show the old detailed choice when editing a reading saved with it
+    const ctxList = GLUCOSE_CTX.includes(e.context) || !e.context || e.context === 'unspecified' ? GLUCOSE_CTX : [...GLUCOSE_CTX, e.context];
     parts.push(
-      field(t('glucoseReading'), h('div', { class: 'big-input' }, h('input', { name: 'value', type: 'number', inputmode: 'decimal', step: '0.1', min: '0.5', max: '40', required: true, placeholder: '5.6', value: e.value }), h('span', {}, 'mmol/L'))),
+      h('div', { class: 'big-input' }, h('input', { name: 'value', type: 'number', inputmode: 'decimal', step: '0.1', min: '0.5', max: '40', required: true, placeholder: '0.0', 'aria-label': t('glucoseReading'), value: e.value }), h('span', {}, 'mmol/L')),
       h('div', { class: 'field' }, h('span', { class: 'field-label' }, t('whenTaken')),
-        chips('context', GLUCOSE_CTX.map((c) => ({ value: c, label: t('ctx_' + c) })), e.context === 'unspecified' ? '' : e.context, { required: true })),
-      field(t('notes'), h('textarea', { name: 'notes', rows: 2, placeholder: t('notesGlucoseEg'), value: e.notes })));
+        chips('context', ctxList.map((c) => ({ value: c, label: t('ctx_' + c) })), e.context === 'unspecified' ? '' : e.context, { required: true })),
+      field(t('notesOptional'), h('input', { name: 'notes', placeholder: t('notesGlucoseEg'), value: e.notes })));
   } else if (kind === 'weight') {
     parts.push(
-      field(t('weightKg'), h('div', { class: 'big-input' }, h('input', { name: 'value', type: 'number', inputmode: 'decimal', step: '0.05', min: '1', max: '400', required: true, placeholder: '70.5', value: e.value }), h('span', {}, 'kg'))),
-      field(t('notes'), h('textarea', { name: 'notes', rows: 2, value: e.notes })));
+      h('div', { class: 'big-input' }, h('input', { name: 'value', type: 'number', inputmode: 'decimal', step: '0.05', min: '1', max: '400', required: true, placeholder: '0.0', 'aria-label': t('weightKg'), value: e.value }), h('span', {}, 'kg')),
+      h('input', { type: 'hidden', name: 'notes', value: e.notes }));
   } else if (kind === 'food') {
     parts.push(
       h('div', { class: 'field' }, h('span', { class: 'field-label' }, t('whichMeal')), chips('context', MEALS.map(([m, icon]) => ({ value: m, label: t('meal_' + m), icon })), e.context, { required: true })),
       field(t('whatEaten'), h('textarea', { name: 'description', rows: 3, required: true, placeholder: t('whatEatenEg'), value: e.description })),
-      field(t('notes'), h('textarea', { name: 'notes', rows: 2, placeholder: t('notesFoodEg'), value: e.notes })));
+      h('input', { type: 'hidden', name: 'notes', value: e.notes }));
   } else {
     const desc = h('input', { name: 'description', required: true, placeholder: t('activityEg'), value: e.description });
     const dur = h('input', { name: 'duration', type: 'number', inputmode: 'numeric', min: '1', max: '1440', placeholder: '30', value: e.duration ?? '' });
+    const pick = (group, input, val) => (ev) => {
+      input.value = val;
+      group.querySelectorAll('.chip-btn').forEach((b) => b.classList.toggle('on', b === ev.currentTarget));
+    };
+    const actGroup = h('div', { class: 'quick' });
+    actGroup.append(...ACTIVITIES.map((a) => h('button', { type: 'button', class: `chip-btn${e.description === t('act_' + a) ? ' on' : ''}`, onclick: pick(actGroup, desc, t('act_' + a)) }, t('act_' + a))));
+    const durGroup = h('div', { class: 'quick' });
+    durGroup.append(...[10, 15, 30, 45, 60].map((m) => h('button', { type: 'button', class: `chip-btn${Number(e.duration) === m ? ' on' : ''}`, onclick: pick(durGroup, dur, m) }, `${m} ${t('min')}`)));
     parts.push(
-      h('div', { class: 'field' }, h('span', { class: 'field-label' }, t('whatActivity')),
-        h('div', { class: 'quick' }, ACTIVITIES.map((a) => h('button', { type: 'button', class: 'chip-btn', onclick: () => { desc.value = t('act_' + a); } }, t('act_' + a)))), desc),
-      h('div', { class: 'field' }, h('span', { class: 'field-label' }, t('howLong')),
-        h('div', { class: 'quick' }, [10, 15, 20, 30, 45, 60].map((m) => h('button', { type: 'button', class: 'chip-btn', onclick: () => { dur.value = m; } }, `${m} ${t('min')}`))),
-        h('div', { class: 'big-input small' }, dur, h('span', {}, t('minutes')))),
-      field(t('notes'), h('textarea', { name: 'notes', rows: 2, value: e.notes })));
+      h('div', { class: 'field' }, h('span', { class: 'field-label' }, t('whatActivity')), actGroup, desc),
+      h('div', { class: 'field' }, h('span', { class: 'field-label' }, t('howLong')), durGroup, h('div', { class: 'inline-input' }, dur, h('span', {}, t('minutes')))),
+      h('input', { type: 'hidden', name: 'notes', value: e.notes }));
   }
 
-  parts.push(h('div', { class: 'row2' },
-    field(t('date'), h('input', { name: 'date', type: 'date', required: true, max: today(), value: e.date })),
-    field(t('time'), h('input', { name: 'time', type: 'time', value: e.time }))));
-  parts.push(err, h('div', { class: 'form-actions' },
-    entry ? h('button', { type: 'button', class: 'btn danger', onclick: async () => {
+  parts.push(whenField(e), err, h('div', { class: 'sheet-actions' },
+    h('button', { type: 'submit', class: 'btn primary block' }, '✓ ', t('save')),
+    entry ? h('button', { type: 'button', class: 'btn danger-text block', onclick: async () => {
       if (!confirm(t('confirmDelete'))) return;
       await api('DELETE', `/api/entries/${entry.id}`);
       dlg.close(); toast(t('deleted')); render();
-    } }, '🗑 ', t('delete')) : null,
-    h('button', { type: 'submit', class: 'btn primary grow' }, '✓ ', t('save'))));
+    } }, t('deleteRecord')) : null));
   form.append(...parts);
 
   form.addEventListener('submit', async (ev) => {
@@ -512,7 +562,6 @@ function openEntry(p, kind, entry) {
     try {
       const saved = entry ? await api('PUT', `/api/entries/${entry.id}`, body) : await api('POST', `/api/profiles/${p.id}/entries`, body);
       dlg.close();
-      state.month = saved.date.slice(0, 7);
       await render();
       if (kind === 'glucose') showResult(p, saved);
       else toast('✓ ' + t('saved'), 'ok');
@@ -520,21 +569,29 @@ function openEntry(p, kind, entry) {
   });
 
   const titles = { glucose: 'addGlucose', weight: 'addWeight', food: 'addFood', activity: 'addActivity' };
-  const dlg = modal(`${KIND_ICON[kind]} ${entry ? t('editRecord') : t(titles[kind])}`, form);
-  form.querySelector('input[name=value], textarea[name=description], input[name=description]')?.focus();
+  const dlg = sheet(`${KIND_ICON[kind]} ${entry ? t('editRecord') : t(titles[kind])}`, form);
+  if (!entry) form.querySelector('input[name=value], textarea[name=description]')?.focus();
 }
 
 // Big, clear feedback right after a glucose reading is saved.
 function showResult(p, e) {
-  const targets = targetsFor(p);
-  const s = classify(e.value, e.context, targets);
-  const dlg = modal(t('resultTitle'), h('div', { class: `result ${s.level}` },
+  const s = classify(e.value, e.context, targetsFor(p));
+  const dlg = sheet(t('resultTitle'), h('div', { class: `result ${s.level}` },
     h('div', { class: 'result-icon', 'aria-hidden': 'true' }, LEVEL_ICON[s.level]),
     h('div', { class: 'result-value' }, fmt1(e.value), h('span', {}, ' mmol/L')),
     h('div', { class: 'result-label' }, t('level_' + s.level)),
     h('p', { class: 'result-advice' }, t('advice_' + s.level)),
     h('p', { class: 'small muted' }, t('ctx_' + e.context), ' · ', t('targetWas', { min: fmt1(s.range.min), max: fmt1(s.range.max) })),
     h('button', { class: 'btn primary block', onclick: () => dlg.close() }, t('ok'))));
+}
+
+function openPersonMenu(p) {
+  const item = (icon, label, onclick, cls = '') => h('button', { class: `menu-item ${cls}`, onclick: () => { dlg.close(); onclick(); } }, h('span', { 'aria-hidden': 'true' }, icon), label);
+  const dlg = sheet(p.name, h('div', { class: 'menu' },
+    h('p', { class: 'muted' }, t('yearsOld', { n: ageOn(p.birthdate) }), ' · ', genderLabel(p.gender), ' · ', t('born'), ' ', fmtDate(p.birthdate)),
+    item('✎', t('editPerson'), () => openProfileForm(p)),
+    item('⇅', t('backup'), () => openDataTools(p)),
+    item('⚙', t('settings'), openSettings)));
 }
 
 function openProfileForm(p) {
@@ -560,19 +617,18 @@ function openProfileForm(p) {
       h('summary', {}, '🎯 ', t('doctorTargets')),
       h('p', { class: 'hint' }, t('doctorTargetsHint')),
       defaultsHint,
-      h('div', { class: 'row3' },
-        field(t('beforeMealMin'), num('target_before_min', p?.target_before_min)),
-        field(t('beforeMealMax'), num('target_before_max', p?.target_before_max)),
-        field(t('afterMealMax'), num('target_after_max', p?.target_after_max)))),
+      field(t('beforeMealMin'), num('target_before_min', p?.target_before_min)),
+      field(t('beforeMealMax'), num('target_before_max', p?.target_before_max)),
+      field(t('afterMealMax'), num('target_after_max', p?.target_after_max))),
     err,
-    h('div', { class: 'form-actions' },
-      p ? h('button', { type: 'button', class: 'btn danger', onclick: async () => {
+    h('div', { class: 'sheet-actions' },
+      h('button', { type: 'submit', class: 'btn primary block' }, '✓ ', t('save')),
+      p ? h('button', { type: 'button', class: 'btn danger-text block', onclick: async () => {
         if (!confirm(t('confirmDeletePerson', { name: p.name }))) return;
         if (!confirm(t('confirmDeletePerson2'))) return;
         await api('DELETE', `/api/profiles/${p.id}`);
         dlg.close(); location.hash = '#/';
-      } }, '🗑 ', t('delete')) : null,
-      h('button', { type: 'submit', class: 'btn primary grow' }, '✓ ', t('save'))));
+      } }, t('deletePerson')) : null));
   updateHints();
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
@@ -585,7 +641,7 @@ function openProfileForm(p) {
       toast('✓ ' + t('saved'), 'ok');
     } catch (e) { err.textContent = e.message; }
   });
-  const dlg = modal(p ? t('editPerson') : t('addPerson'), form);
+  const dlg = sheet(p ? t('editPerson') : t('addPerson'), form);
 }
 
 function openDataTools(p) {
@@ -606,9 +662,10 @@ function openDataTools(p) {
     } catch (e) { status.textContent = `${t('importFailed')}: ${e.message}`; }
     file.value = '';
   });
+  const fileBase = `rekod-gula-${p.name.replace(/\W+/g, '-')}-${today()}`;
   const exportJson = async () => {
     const data = await api('GET', `/api/profiles/${p.id}/export`);
-    download(`rekod-gula-${p.name.replace(/\W+/g, '-')}-${today()}.json`, JSON.stringify(data, null, 2), 'application/json');
+    download(`${fileBase}.json`, JSON.stringify(data, null, 2), 'application/json');
   };
   const exportCsv = async () => {
     const { entries } = await api('GET', `/api/profiles/${p.id}/export`);
@@ -619,9 +676,9 @@ function openDataTools(p) {
         e.kind === 'glucose' ? t('level_' + classify(e.value, e.context, targets).level) : '',
         e.description, e.duration ?? '', e.notes])];
     const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\r\n');
-    download(`rekod-gula-${p.name.replace(/\W+/g, '-')}-${today()}.csv`, '﻿' + csv, 'text/csv;charset=utf-8');
+    download(`${fileBase}.csv`, '﻿' + csv, 'text/csv;charset=utf-8');
   };
-  const dlg = modal(t('backup'), h('div', { class: 'stack' },
+  const dlg = sheet(t('backup'), h('div', { class: 'stack' },
     h('p', {}, t('backupIntro')),
     h('button', { class: 'btn secondary block', onclick: exportJson }, '↓ ', t('exportJson')),
     h('button', { class: 'btn secondary block', onclick: exportCsv }, '↓ ', t('exportCsv')),
@@ -634,7 +691,6 @@ function openDataTools(p) {
 function openSettings() {
   const err = h('p', { class: 'error', role: 'alert' });
   const form = h('form', { class: 'stack' },
-    h('h3', {}, t('changePassword')),
     field(t('currentPassword'), h('input', { name: 'current', type: 'password', required: true, autocomplete: 'current-password' })),
     field(t('newPassword'), h('input', { name: 'password', type: 'password', required: true, minlength: 6, autocomplete: 'new-password' })),
     err,
@@ -643,21 +699,18 @@ function openSettings() {
     ev.preventDefault();
     try { await api('PUT', '/api/me/password', Object.fromEntries(new FormData(form))); dlg.close(); toast('✓ ' + t('passwordChanged'), 'ok'); } catch (e) { err.textContent = e.message; }
   });
-  const dlg = modal(t('settings'), h('div', { class: 'stack' },
+  const dlg = sheet(t('settings'), h('div', { class: 'stack' },
+    h('div', { class: 'field' }, h('span', { class: 'field-label' }, t('language')), langToggle()),
     h('p', {}, t('loggedInAs'), ' ', h('b', {}, state.me.display_name), ` (${state.me.username})`),
     h('p', { class: 'hint' }, t('shareAccountHint')),
-    form,
-    h('hr'),
-    h('button', { class: 'btn danger block', onclick: async () => { await api('POST', '/api/logout', {}); state.me = null; dlg.close(); location.hash = '#/login'; } }, '⎋ ', t('logout'))));
+    h('details', { class: 'targets-details' }, h('summary', {}, '🔑 ', t('changePassword')), form),
+    h('button', { class: 'btn ghost block', onclick: async () => { await api('POST', '/api/logout', {}); state.me = null; dlg.close(); location.hash = '#/login'; } }, '⎋ ', t('logout'))));
 }
 
 // ---------- monthly report (print) ----------
 
 async function renderReport(root, id, month) {
-  const [p, entries] = await Promise.all([
-    api('GET', `/api/profiles/${id}`),
-    api('GET', `/api/profiles/${id}/entries?from=${month}-01&to=${month}-31`),
-  ]);
+  const [p, entries] = await Promise.all([api('GET', `/api/profiles/${id}`), loadMonth(id, month)]);
   const targets = targetsFor(p);
   const s = computeStats(entries, targets);
   const asc = [...entries].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time) || a.id - b.id);
@@ -665,20 +718,15 @@ async function renderReport(root, id, month) {
   const w = asc.filter((e) => e.kind === 'weight');
   const food = asc.filter((e) => e.kind === 'food');
   const act = asc.filter((e) => e.kind === 'activity');
-  const table = (head, rows) => h('table', {}, h('thead', {}, h('tr', {}, head.map((x) => h('th', {}, x)))), h('tbody', {}, rows));
+  const table = (head, rows) => h('div', { class: 'table-wrap' }, h('table', {}, h('thead', {}, h('tr', {}, head.map((x) => h('th', {}, x)))), h('tbody', {}, rows)));
   const when = (e) => `${fmtDate(e.date)}${e.time ? ' ' + e.time : ''}`;
-
   const sum = (label, value) => h('div', { class: 'sum' }, h('div', { class: 'sum-label' }, label), h('div', { class: 'sum-value' }, value));
 
   root.replaceChildren(
-    h('div', { class: 'report-bar noprint' },
-      h('a', { class: 'btn ghost', href: `#/p/${p.id}` }, '← ', t('back')),
-      h('div', { class: 'month-nav' },
-        h('a', { class: 'btn ghost', href: `#/p/${p.id}/report/${shiftMonth(month, -1)}`, 'aria-label': t('prevMonth') }, '‹'),
-        h('div', { class: 'month-label' }, monthLabel(month)),
-        month < thisMonth() ? h('a', { class: 'btn ghost', href: `#/p/${p.id}/report/${shiftMonth(month, 1)}`, 'aria-label': t('nextMonth') }, '›') : null),
-      langToggle(),
-      h('button', { class: 'btn primary', onclick: () => window.print() }, '🖨 ', t('printNow'))),
+    h('header', { class: 'bar noprint' },
+      h('a', { class: 'icon-btn', href: `#/p/${p.id}/laporan`, 'aria-label': t('back') }, '‹'),
+      h('div', { class: 'bar-title' }, t('tabReport')),
+      h('button', { class: 'btn primary small', onclick: () => window.print() }, '🖨️ ', t('print'))),
     h('article', { class: 'report' },
       h('header', { class: 'report-head' },
         h('div', {}, h('h1', {}, t('reportTitle')), h('div', { class: 'report-month' }, monthLabel(month))),
@@ -704,7 +752,7 @@ async function renderReport(root, id, month) {
           ' ', targets.custom ? t('targetsCustom') : t('targetsDefault', { group: t('group_' + targets.group), age: ageOn(p.birthdate) }))),
 
       h('section', { class: 'report-charts' },
-        h('div', {}, h('h2', {}, t('glucoseTrend')), g.length ? glucoseChart(g, targets, month, true) : h('p', { class: 'muted' }, t('noData')), g.length ? chartLegend(targets) : null),
+        h('div', {}, h('h2', {}, t('glucoseTrend')), g.length ? [glucoseChart(g, targets, month, true), chartLegend(targets)] : h('p', { class: 'muted' }, t('noData'))),
         w.length ? h('div', {}, h('h2', {}, t('weightTrend')), weightChart(w, month, true)) : null),
 
       h('section', {},
@@ -746,20 +794,21 @@ async function render() {
     }
     const hash = location.hash || '#/';
     if (!state.me) { if (hash !== '#/login') { location.hash = '#/login'; return; } return renderLogin(root); }
-    let m;
     if (hash === '#/login') { location.hash = '#/'; return; }
+    let m;
     if ((m = /^#\/p\/(\d+)\/report\/(\d{4}-\d{2})$/.exec(hash))) return await renderReport(root, m[1], m[2]);
-    if ((m = /^#\/p\/(\d+)$/.exec(hash))) {
+    if ((m = /^#\/p\/(\d+)(?:\/(graf|sejarah|laporan))?$/.exec(hash))) {
       if (state.personId !== m[1]) { state.personId = m[1]; state.month = thisMonth(); }
-      return await renderPerson(root, m[1]);
+      const view = { graf: renderChart, sejarah: renderHistory, laporan: renderReportTab }[m[2]] || renderToday;
+      return await view(root, m[1]);
     }
     return await renderHome(root);
   } catch (e) {
     if (token !== renderToken || !state.me) return;
-    root.replaceChildren(topbar(), h('main', { class: 'shell' }, h('div', { class: 'card' }, h('h2', {}, t('errorGeneric')), h('p', {}, e.message), h('a', { class: 'btn primary', href: '#/' }, t('back')))));
+    root.replaceChildren(h('main', { class: 'page' }, h('div', { class: 'card' }, h('h2', {}, t('errorGeneric')), h('p', {}, e.message), h('a', { class: 'btn primary block', href: '#/' }, t('back')))));
   }
 }
 
 document.documentElement.lang = lang;
-window.addEventListener('hashchange', render);
+window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
 render();

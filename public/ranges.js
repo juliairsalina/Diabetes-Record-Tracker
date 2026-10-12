@@ -16,7 +16,7 @@ export const DEFAULT_TARGETS = {
   older: { beforeMin: 4.4, beforeMax: 8.0, afterMax: 10.0 }, // 65 and above: relaxed to avoid lows
 };
 
-export const BEFORE_MEAL = ['before_breakfast', 'before_lunch', 'before_dinner'];
+export const BEFORE_MEAL = ['before_breakfast', 'before_meal', 'before_lunch', 'before_dinner'];
 
 // Age in whole years on a given day. Recomputed every time, so it updates on each birthday.
 export function ageOn(birthdate, today = new Date()) {

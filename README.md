@@ -2,6 +2,15 @@
 
 A simple family website for logging blood glucose, food, physical activity and weight. It is built for parents: large buttons, Bahasa Melayu by default (English toggle), and a clear traffic-light signal after every reading.
 
+It is designed **for phones first**. Each person has four bottom tabs:
+
+- **Hari ini** (Today): the latest reading with its colour signal, one big *Rekod Gula Darah* button, quick buttons for food, activity and weight, and today's records.
+- **Graf** (Charts): the month's average, % in target, and the glucose and weight graphs.
+- **Sejarah** (History): every record for the month, by day. Tap a record to edit or delete it.
+- **Laporan** (Report): the month's summary and the printable report.
+
+Forms open as full-screen sheets with only the essentials. Date and time default to *now*; tap *Tukar* to change them.
+
 ## Features
 
 - **Login.** Family accounts with username and password. Everyone in the family can use the same account on their own phone.
