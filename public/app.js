@@ -1,4 +1,4 @@
-import { ageOn, targetsFor, classify, BEFORE_MEAL, LOW } from './ranges.js';
+import { ageOn, targetsFor, classify, BEFORE_MEAL, LOW, bpTargetsFor, classifyBp, BP_COLOUR } from './ranges.js';
 import { STRINGS } from './i18n.js';
 
 // ---------- language ----------
@@ -66,7 +66,9 @@ const fmt1 = (v) => Number(v).toFixed(1);
 const genderLabel = (g) => t(g === 'male' ? 'male' : 'female');
 const initial = (name) => name.trim()[0]?.toUpperCase() || '?';
 const LEVEL_ICON = { low: '▼', below: '↓', normal: '✓', above: '↑', high: '▲' };
-const KIND_ICON = { glucose: '🩸', weight: '⚖️', food: '🍽️', activity: '🚶' };
+const KIND_ICON = { glucose: '🩸', weight: '⚖️', food: '🍽️', activity: '🚶', bp: '❤️' };
+const BP_ICON = { low: '↓', normal: '✓', above: '↑', high: '▲', veryhigh: '▲' };
+const fmtBp = (e) => `${Math.round(e.value)}/${Math.round(e.value2)}`;
 
 // ---------- API ----------
 
@@ -112,6 +114,13 @@ function signalPill(level, value) {
     h('span', { 'aria-hidden': 'true' }, LEVEL_ICON[level]), ' ',
     value != null ? [h('b', {}, fmt1(value)), ' '] : null,
     t('level_' + level));
+}
+
+function bpPill(level, e) {
+  return h('span', { class: `pill ${BP_COLOUR[level]}` },
+    h('span', { 'aria-hidden': 'true' }, BP_ICON[level]), ' ',
+    e ? [h('b', {}, fmtBp(e)), ' '] : null,
+    t('bp_' + level));
 }
 
 function chips(name, options, selected, { required = false } = {}) {
@@ -235,7 +244,9 @@ async function renderToday(root, id) {
   root.replaceChildren(...personShell(p, '', [
     latestCard(p, targets),
     h('button', { class: 'big-action', onclick: () => openEntry(p, 'glucose') }, '＋ ', t('addGlucoseShort')),
+    latestBp(p),
     h('div', { class: 'small-actions' },
+      smallAction('❤️', t('addBp'), () => openEntry(p, 'bp')),
       smallAction('🍽️', t('addFood'), () => openEntry(p, 'food')),
       smallAction('🚶', t('addActivity'), () => openEntry(p, 'activity')),
       smallAction('⚖️', t('addWeight'), () => openEntry(p, 'weight'))),
@@ -258,6 +269,18 @@ function latestCard(p, targets) {
     sig.level !== 'normal' ? h('p', { class: 'latest-advice' }, t('advice_' + sig.level)) : null);
 }
 
+// One quiet line under the sugar card: the last blood pressure and its label.
+function latestBp(p) {
+  const last = p.last_bp;
+  if (!last) return null;
+  const level = classifyBp(last.value, last.value2, bpTargetsFor(p));
+  return h('button', { class: 'latest-bp', onclick: () => openEntry(p, 'bp') },
+    h('span', { class: 'latest-bp-label' }, '❤️ ', t('bpShort')),
+    h('span', { class: 'latest-bp-value' }, fmtBp(last)),
+    bpPill(level),
+    h('span', { class: 'latest-bp-when' }, fmtDayShort(last.date), last.time ? ' ' + last.time : ''));
+}
+
 async function renderChart(root, id) {
   const month = state.month;
   const [p, entries] = await Promise.all([api('GET', `/api/profiles/${id}`), loadMonth(id, month)]);
@@ -265,19 +288,27 @@ async function renderChart(root, id) {
   const s = computeStats(entries, targets);
   const glucose = entries.filter((e) => e.kind === 'glucose');
   const weight = entries.filter((e) => e.kind === 'weight');
+  const bp = entries.filter((e) => e.kind === 'bp');
+  const bpT = bpTargetsFor(p);
+  const bs = bpStats(bp, bpT);
   root.replaceChildren(...personShell(p, 'graf', [
     monthNav(month, changeMonth),
     h('section', { class: 'card' },
       h('h2', {}, t('glucoseTrend')),
       glucose.length ? [
         h('p', { class: 'chart-summary' }, t('chartSummary', { avg: fmt1(s.avg), a: s.levels.normal, b: s.count })),
-        glucoseChart(glucose, targets, month),
+        glucoseChart(glucose, targets, periodRange(month)),
         h('p', { class: 'chart-legend' }, h('i', { class: 'key band' }), t('legendBandSimple')),
       ] : h('p', { class: 'empty' }, t('noGlucoseMonth'))),
+    bp.length ? h('section', { class: 'card' },
+      h('h2', {}, t('bpTrend')),
+      h('p', { class: 'chart-summary' }, t('bpSummary', { avg: bs.avgText, a: bs.normal, b: bs.count })),
+      bpChart(bp, bpT, periodRange(month)),
+      bpLegend(bpT)) : null,
     weight.length ? h('section', { class: 'card' },
       h('h2', {}, t('weightTrend')),
       h('p', { class: 'chart-summary' }, t('weightSummary', { w: s.weightLast.toFixed(1), c: s.weightChange != null ? `${s.weightChange > 0 ? '+' : ''}${s.weightChange.toFixed(1)}` : '0' })),
-      weightChart(weight, month)) : null,
+      weightChart(weight, periodRange(month))) : null,
   ]));
 }
 
@@ -289,7 +320,7 @@ async function renderHistory(root, id) {
   entries.forEach((e) => { if (!byDate.has(e.date)) byDate.set(e.date, []); byDate.get(e.date).push(e); });
   root.replaceChildren(...personShell(p, 'sejarah', [
     monthNav(month, changeMonth),
-    h('a', { class: 'btn secondary block', href: `#/p/${p.id}/report/${month}` }, '🖨️ ', t('printMonthReport')),
+    h('a', { class: 'btn secondary block', href: `#/p/${p.id}/report/${month}` }, '🖨️ ', t('printReport')),
     entries.length ? [...byDate].map(([date, list]) => h('section', { class: 'day' },
       h('h3', { class: 'day-title' }, fmtDateLong(date)),
       entryList(p, list, targets))) : h('p', { class: 'empty' }, t('noEntriesMonth')),
@@ -301,19 +332,53 @@ async function renderHistory(root, id) {
 function entryText(e) {
   if (e.kind === 'glucose') return [h('b', { class: 'num' }, fmt1(e.value)), ' ', h('span', { class: 'unit' }, t('ctxShort_' + e.context))];
   if (e.kind === 'weight') return [h('b', { class: 'num' }, e.value.toFixed(1)), ' ', h('span', { class: 'unit' }, 'kg')];
+  if (e.kind === 'bp') return [h('b', { class: 'num' }, fmtBp(e)), ' ', h('span', { class: 'unit' }, e.pulse ? `${t('pulse')} ${e.pulse}` : 'mmHg')];
   if (e.kind === 'food') return [`${KIND_ICON.food} `, h('b', {}, t('meal_' + e.context)), ': ', e.description];
   return [`${KIND_ICON.activity} `, h('b', {}, e.description), e.duration ? ` · ${e.duration} ${t('min')}` : ''];
 }
 
+// Where a record sits in the day, so a day reads from morning to night. Records saved without
+// a time are placed by their meal or reading time.
+const USUAL_TIME = {
+  breakfast: '08:00', lunch: '13:00', dinner: '19:30', snack: '16:00',
+  before_breakfast: '07:30', before_meal: '12:30', before_lunch: '12:30', before_dinner: '18:30', after_meal: '21:30', bedtime: '22:30',
+};
+const dayOrder = (e) => e.time || USUAL_TIME[e.context] || (e.kind === 'weight' ? '07:00' : '12:00');
+
 function entryList(p, list, targets) {
+  const bpT = bpTargetsFor(p);
+  list = [...list].sort((a, b) => dayOrder(a).localeCompare(dayOrder(b)) || a.id - b.id);
   return h('div', { class: 'entries' }, list.map((e) => {
-    const sig = e.kind === 'glucose' ? classify(e.value, e.context, targets) : null;
+    let badge = null;
+    if (e.kind === 'glucose') {
+      const sig = classify(e.value, e.context, targets);
+      badge = h('span', { class: `dot-sig ${sig.level}` }, LEVEL_ICON[sig.level], ' ', t('level_' + sig.level));
+    } else if (e.kind === 'bp') {
+      const level = classifyBp(e.value, e.value2, bpT);
+      badge = h('span', { class: `dot-sig ${BP_COLOUR[level]}` }, '❤️ ', t('bp_' + level));
+    } else if (e.kind === 'weight') badge = h('span', { class: 'entry-kind' }, KIND_ICON.weight);
     return h('button', { class: 'entry', onclick: () => openEntry(p, e.kind, e) },
       h('span', { class: 'entry-time' }, e.time || '–'),
       h('span', { class: 'entry-body' }, h('span', { class: 'entry-line' }, entryText(e))),
-      sig ? h('span', { class: `dot-sig ${sig.level}` }, LEVEL_ICON[sig.level], ' ', t('level_' + sig.level))
-        : e.kind === 'weight' ? h('span', { class: 'entry-kind' }, KIND_ICON.weight) : null);
+      badge);
   }));
+}
+
+// Blood pressure numbers for a list of readings.
+function bpStats(list, bpT) {
+  const levels = { low: 0, normal: 0, above: 0, high: 0, veryhigh: 0 };
+  list.forEach((e) => { levels[classifyBp(e.value, e.value2, bpT)]++; });
+  const n = list.length;
+  const avg = (k) => Math.round(list.reduce((a, e) => a + e[k], 0) / n);
+  const pulses = list.filter((e) => e.pulse);
+  return {
+    count: n, levels, normal: levels.normal,
+    avgSys: n ? avg('value') : null, avgDia: n ? avg('value2') : null,
+    avgText: n ? `${avg('value')}/${avg('value2')}` : '—',
+    pctNormal: n ? Math.round((levels.normal / n) * 100) : 0,
+    maxText: n ? fmtBp(list.reduce((a, e) => (e.value > a.value ? e : a))) : '—',
+    avgPulse: pulses.length ? Math.round(pulses.reduce((a, e) => a + e.pulse, 0) / pulses.length) : null,
+  };
 }
 
 // ---------- stats ----------
@@ -345,14 +410,29 @@ function computeStats(entries, targets) {
 
 // ---------- charts (inline SVG, one axis each) ----------
 
-// x position inside a month: day + time of day, so several readings on one day spread out.
-function monthX(e, month) {
-  const day = Number(e.date.slice(8, 10));
-  const [hh, mm] = (e.time || '12:00').split(':').map(Number);
-  return (day - 1 + (hh * 60 + mm) / 1440) / daysIn(month);
+const dayNum = (iso) => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) / 864e5;
+
+// The months a chart or report covers, ending with lastMonth. Axis ticks are days for one month
+// and month names for longer periods.
+function periodRange(lastMonth, months = 1) {
+  const first = shiftMonth(lastMonth, -(months - 1));
+  const from = `${first}-01`, to = `${lastMonth}-${pad(daysIn(lastMonth))}`;
+  const start = dayNum(from), days = dayNum(to) - start + 1;
+  const monthList = Array.from({ length: months }, (_, i) => shiftMonth(first, i));
+  const ticks = months === 1
+    ? [1, 10, 20, daysIn(lastMonth)].map((d) => ({ f: (d - 0.5) / days, label: String(d) }))
+    : monthList.map((m) => ({ f: (dayNum(`${m}-01`) - start + daysIn(m) / 2) / days, label: t('monthsShort')[+m.slice(5) - 1] }));
+  const separators = months === 1 ? [] : monthList.slice(1).map((m) => (dayNum(`${m}-01`) - start) / days);
+  return { first, last: lastMonth, months, monthList, from, to, start, days, ticks, separators };
 }
 
-function chartFrame({ points, yMin, yMax, yStep, month, band, refLines = [], print = false }) {
+// x position (0–1) inside the period: day + time of day, so several readings on one day spread out.
+function rangeX(e, range) {
+  const [hh, mm] = (e.time || '12:00').split(':').map(Number);
+  return (dayNum(e.date) - range.start + (hh * 60 + mm) / 1440) / range.days;
+}
+
+function chartFrame({ points, yMin, yMax, yStep, range, band, refLines = [], print = false }) {
   // Drawn at phone proportions so text stays readable; the report uses a wide version.
   const W = print ? 640 : 360, H = print ? 200 : 230, L = 30, R = 8, T = 10, B = 26;
   const x = (f) => L + f * (W - L - R);
@@ -365,12 +445,15 @@ function chartFrame({ points, yMin, yMax, yStep, month, band, refLines = [], pri
       sv('text', { x: L - 6, y: y(v) + 4, 'text-anchor': 'end', class: 'tick' }, Number.isInteger(yStep) ? String(v) : v.toFixed(1)));
   }
   refLines.forEach((r) => svg.append(sv('line', { x1: L, x2: W - R, y1: y(r.v), y2: y(r.v), class: `ref ${r.cls}` })));
-  const days = daysIn(month);
-  [1, 10, 20, days].forEach((d) => svg.append(sv('text', { x: x((d - 0.5) / days), y: H - 7, 'text-anchor': 'middle', class: 'tick' }, String(d))));
+  range.separators.forEach((f) => svg.append(sv('line', { x1: x(f), x2: x(f), y1: T, y2: H - B, class: 'grid' })));
+  range.ticks.forEach((tk) => svg.append(sv('text', { x: x(tk.f), y: H - 7, 'text-anchor': 'middle', class: 'tick' }, tk.label)));
 
   const pts = points.map((p) => ({ ...p, px: x(p.x), py: y(p.v) }));
-  if (pts.length > 1) svg.append(sv('polyline', { points: pts.map((p) => `${p.px},${p.py}`).join(' '), class: 'trend' }));
-  pts.forEach((p) => svg.append(sv('circle', { cx: p.px, cy: p.py, r: pts.length > 40 ? 3.5 : 4.5, class: `dot ${p.cls || ''}` })));
+  // one line per series (blood pressure has two: upper and lower)
+  const groups = new Map();
+  pts.forEach((p) => { const k = p.series || ''; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(p); });
+  groups.forEach((g, k) => { if (g.length > 1) svg.append(sv('polyline', { points: g.map((p) => `${p.px},${p.py}`).join(' '), class: `trend ${k}` })); });
+  pts.forEach((p) => svg.append(sv('circle', { cx: p.px, cy: p.py, r: pts.length > 120 ? 2.5 : pts.length > 40 ? 3.5 : 4.5, class: `dot ${p.cls || ''}` })));
 
   const wrap = h('div', { class: 'chart-wrap' }, svg);
   if (!print) attachTooltip(wrap, svg, pts, W);
@@ -398,23 +481,23 @@ function attachTooltip(wrap, svg, pts, W) {
   svg.addEventListener('pointerleave', () => { tip.hidden = true; hair.setAttribute('visibility', 'hidden'); });
 }
 
-function glucoseChart(list, targets, month, print = false) {
+function glucoseChart(list, targets, range, print = false) {
   const sorted = [...list].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const vals = sorted.map((e) => e.value);
   const yMin = Math.max(0, Math.floor(Math.min(3, ...vals) - 0.5));
   const yMax = Math.ceil(Math.max(targets.afterMax + 2, ...vals) + 0.5);
   return chartFrame({
-    month, print, yMin, yMax, yStep: yMax - yMin > 12 ? 4 : 2,
+    range, print, yMin, yMax, yStep: yMax - yMin > 12 ? 4 : 2,
     band: { min: targets.beforeMin, max: targets.beforeMax },
     refLines: [{ v: targets.afterMax, cls: 'after' }, { v: LOW, cls: 'low' }],
     points: sorted.map((e) => {
       const s = classify(e.value, e.context, targets);
-      return { x: monthX(e, month), v: e.value, cls: s.level, valueText: `${fmt1(e.value)} · ${t('level_' + s.level)}`, lines: [`${fmtDate(e.date)}${e.time ? ' ' + e.time : ''}`, t('ctx_' + e.context)] };
+      return { x: rangeX(e, range), v: e.value, cls: s.level, valueText: `${fmt1(e.value)} · ${t('level_' + s.level)}`, lines: [`${fmtDate(e.date)}${e.time ? ' ' + e.time : ''}`, t('ctx_' + e.context)] };
     }),
   });
 }
 
-function weightChart(list, month, print = false) {
+function weightChart(list, range, print = false) {
   const sorted = [...list].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const vals = sorted.map((e) => e.value);
   let lo = Math.min(...vals), hi = Math.max(...vals);
@@ -423,9 +506,31 @@ function weightChart(list, month, print = false) {
   lo = Math.floor((lo - span * 0.2) / step) * step;
   hi = Math.ceil((hi + span * 0.2) / step) * step;
   return chartFrame({
-    month, print, yMin: lo, yMax: hi, yStep: step,
-    points: sorted.map((e) => ({ x: monthX(e, month), v: e.value, cls: 'weight', valueText: `${e.value.toFixed(2)} kg`, lines: [fmtDate(e.date)] })),
+    range, print, yMin: lo, yMax: hi, yStep: step,
+    points: sorted.map((e) => ({ x: rangeX(e, range), v: e.value, cls: 'weight', valueText: `${e.value.toFixed(2)} kg`, lines: [fmtDate(e.date)] })),
   });
+}
+
+function bpChart(list, bpT, range, print = false) {
+  const sorted = [...list].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  const yMin = Math.max(20, Math.floor((Math.min(60, ...sorted.map((e) => e.value2)) - 10) / 20) * 20);
+  const yMax = Math.ceil((Math.max(160, ...sorted.map((e) => e.value)) + 10) / 20) * 20;
+  const point = (e, series, v) => {
+    const level = classifyBp(e.value, e.value2, bpT);
+    return { x: rangeX(e, range), v, series, cls: series, valueText: `${fmtBp(e)} mmHg · ${t('bp_' + level)}`, lines: [`${fmtDate(e.date)}${e.time ? ' ' + e.time : ''}`, e.pulse ? `${t('pulse')} ${e.pulse}` : ''].filter(Boolean) };
+  };
+  return chartFrame({
+    range, print, yMin, yMax, yStep: 20,
+    refLines: [{ v: bpT.sys, cls: 'sys' }, { v: bpT.dia, cls: 'dia' }],
+    points: [...sorted.map((e) => point(e, 'sys', e.value)), ...sorted.map((e) => point(e, 'dia', e.value2))],
+  });
+}
+
+function bpLegend(bpT) {
+  return h('div', { class: 'chart-legend wrap' },
+    h('span', {}, h('i', { class: 'key line sys' }), t('bpUpper')),
+    h('span', {}, h('i', { class: 'key line dia' }), t('bpLower')),
+    h('span', {}, h('i', { class: 'key dashed' }), t('bpTargetLine', { s: bpT.sys, d: bpT.dia })));
 }
 
 function chartLegend(targets) {
@@ -471,6 +576,18 @@ function openEntry(p, kind, entry) {
       h('div', { class: 'field' }, h('span', { class: 'field-label' }, t('whenTaken')),
         chips('context', ctxList.map((c) => ({ value: c, label: t('ctx_' + c) })), e.context === 'unspecified' ? '' : e.context, { required: true })),
       field(t('notesOptional'), h('input', { name: 'notes', placeholder: t('notesGlucoseEg'), value: e.notes })));
+  } else if (kind === 'bp') {
+    const num = (name, ph, label, value) => h('label', { class: 'bp-field' },
+      h('span', { class: 'field-label' }, label),
+      h('input', { name, type: 'number', inputmode: 'numeric', step: '1', min: name === 'value' ? 50 : 30, max: name === 'value' ? 300 : 200, required: true, placeholder: ph, value }));
+    parts.push(
+      h('div', { class: 'bp-input' },
+        num('value', '120', t('bpUpperShort'), e.value ?? ''),
+        h('span', { class: 'bp-slash', 'aria-hidden': 'true' }, '/'),
+        num('value2', '80', t('bpLowerShort'), e.value2 ?? '')),
+      h('p', { class: 'hint center' }, 'mmHg'),
+      field(t('pulseOptional'), h('div', { class: 'inline-input' }, h('input', { name: 'pulse', type: 'number', inputmode: 'numeric', min: 30, max: 250, placeholder: '72', value: e.pulse ?? '' }), h('span', {}, t('perMinute')))),
+      field(t('notesOptional'), h('input', { name: 'notes', placeholder: t('notesBpEg'), value: e.notes })));
   } else if (kind === 'weight') {
     parts.push(
       h('div', { class: 'big-input' }, h('input', { name: 'value', type: 'number', inputmode: 'decimal', step: '0.05', min: '1', max: '400', required: true, placeholder: '0.0', 'aria-label': t('weightKg'), value: e.value }), h('span', {}, 'kg')),
@@ -515,11 +632,12 @@ function openEntry(p, kind, entry) {
       dlg.close();
       await render();
       if (kind === 'glucose') showResult(p, saved);
+      else if (kind === 'bp') showBpResult(p, saved);
       else toast('✓ ' + t('saved'), 'ok');
     } catch (e2) { err.textContent = e2.message; }
   });
 
-  const titles = { glucose: 'addGlucose', weight: 'addWeight', food: 'addFood', activity: 'addActivity' };
+  const titles = { glucose: 'addGlucose', weight: 'addWeight', food: 'addFood', activity: 'addActivity', bp: 'addBp' };
   const dlg = sheet(`${KIND_ICON[kind]} ${entry ? t('editRecord') : t(titles[kind])}`, form);
   if (!entry) form.querySelector('input[name=value], textarea[name=description]')?.focus();
 }
@@ -536,11 +654,26 @@ function showResult(p, e) {
     h('button', { class: 'btn primary block', onclick: () => dlg.close() }, t('ok'))));
 }
 
+function showBpResult(p, e) {
+  const bpT = bpTargetsFor(p);
+  const level = classifyBp(e.value, e.value2, bpT);
+  const cls = BP_COLOUR[level];
+  const dlg = sheet(t('resultTitle'), h('div', { class: `result ${cls}` },
+    h('div', { class: 'result-icon', 'aria-hidden': 'true' }, BP_ICON[level]),
+    h('div', { class: 'result-value' }, fmtBp(e), h('span', {}, ' mmHg')),
+    e.pulse ? h('div', { class: 'muted' }, `${t('pulse')} ${e.pulse} ${t('perMinute')}`) : null,
+    h('div', { class: 'result-label' }, t('bp_' + level)),
+    h('p', { class: 'result-advice' }, t('bpAdvice_' + level)),
+    h('p', { class: 'small muted' }, t('bpTargetWas', { s: bpT.sys, d: bpT.dia })),
+    h('button', { class: 'btn primary block', onclick: () => dlg.close() }, t('ok'))));
+}
+
 function openPersonMenu(p) {
   const item = (icon, label, onclick, cls = '') => h('button', { class: `menu-item ${cls}`, onclick: () => { dlg.close(); onclick(); } }, h('span', { 'aria-hidden': 'true' }, icon), label);
   const dlg = sheet(p.name, h('div', { class: 'menu' },
     h('p', { class: 'muted' }, t('yearsOld', { n: ageOn(p.birthdate) }), ' · ', genderLabel(p.gender), ' · ', t('born'), ' ', fmtDate(p.birthdate)),
     item('🖨️', t('monthlyReport'), () => { location.hash = `#/p/${p.id}/report/${state.month}`; }),
+    item('🗓️', t('sixMonthReport'), () => { location.hash = `#/p/${p.id}/report/${state.month}/6`; }),
     item('🎯', t('targetsAndColours'), () => openTargets(p)),
     item('✎', t('editPerson'), () => openProfileForm(p)),
     item('⇅', t('backup'), () => openDataTools(p)),
@@ -549,13 +682,22 @@ function openPersonMenu(p) {
 
 function openTargets(p) {
   const targets = targetsFor(p);
+  const bpT = bpTargetsFor(p);
   sheet(t('targetsAndColours'), h('div', { class: 'stack' },
     h('div', { class: 'card' },
       h('div', { class: 'sum-row' }, h('span', {}, t('beforeMeals')), h('b', {}, `${fmt1(targets.beforeMin)} – ${fmt1(targets.beforeMax)}`)),
       h('div', { class: 'sum-row' }, h('span', {}, t('afterMeals')), h('b', {}, `${t('upTo')} ${fmt1(targets.afterMax)}`)),
       h('div', { class: 'sum-row' }, h('span', {}, t('lowBelow')), h('b', {}, `< ${fmt1(LOW)}`))),
     h('p', { class: 'small muted' }, 'mmol/L · ', targets.custom ? t('targetsCustom') : t('targetsDefault', { group: t('group_' + targets.group), age: ageOn(p.birthdate) })),
-    h('div', { class: 'legend-col' }, ['normal', 'below', 'above', 'low', 'high'].map((l) => h('div', {}, signalPill(l), ' ', h('span', { class: 'small muted' }, t('meaning_' + l)))))));
+    h('div', { class: 'legend-col' }, ['normal', 'below', 'above', 'low', 'high'].map((l) => h('div', {}, signalPill(l), ' ', h('span', { class: 'small muted' }, t('meaning_' + l))))),
+    h('h3', { class: 'sheet-subtitle' }, '❤️ ', t('bpTitle')),
+    h('div', { class: 'card' },
+      h('div', { class: 'sum-row' }, h('span', {}, t('bp_normal')), h('b', {}, `< ${bpT.sys}/${bpT.dia}`)),
+      h('div', { class: 'sum-row' }, h('span', {}, t('bp_high')), h('b', {}, '≥ 140/90')),
+      h('div', { class: 'sum-row' }, h('span', {}, t('bp_veryhigh')), h('b', {}, '≥ 180/110')),
+      h('div', { class: 'sum-row' }, h('span', {}, t('bp_low')), h('b', {}, '< 90/60'))),
+    h('p', { class: 'small muted' }, 'mmHg · ', bpT.custom ? t('bpTargetsCustom') : t('bpTargetsDefault')),
+    h('div', { class: 'legend-col' }, ['normal', 'above', 'high', 'veryhigh', 'low'].map((l) => h('div', {}, bpPill(l), ' ', h('span', { class: 'small muted' }, t('bpMeaning_' + l)))))));
 }
 
 function openProfileForm(p) {
@@ -571,7 +713,7 @@ function openProfileForm(p) {
   };
   bd.addEventListener('input', updateHints);
   const num = (name, v) => h('input', { name, type: 'number', inputmode: 'decimal', step: '0.1', min: '2', max: '25', value: v ?? '' });
-  const hasCustom = p && (p.target_before_min != null || p.target_before_max != null || p.target_after_max != null);
+  const hasCustom = p && [p.target_before_min, p.target_before_max, p.target_after_max, p.target_bp_sys, p.target_bp_dia].some((v) => v != null);
   const form = h('form', { class: 'stack' },
     field(t('name'), h('input', { name: 'name', required: true, maxlength: 80, placeholder: t('nameEg'), value: p?.name || '' })),
     h('label', { class: 'field' }, h('span', { class: 'field-label' }, t('birthdate')), bd, ageOut),
@@ -583,7 +725,13 @@ function openProfileForm(p) {
       defaultsHint,
       field(t('beforeMealMin'), num('target_before_min', p?.target_before_min)),
       field(t('beforeMealMax'), num('target_before_max', p?.target_before_max)),
-      field(t('afterMealMax'), num('target_after_max', p?.target_after_max))),
+      field(t('afterMealMax'), num('target_after_max', p?.target_after_max)),
+      h('div', { class: 'field' }, h('span', { class: 'field-label' }, t('bpTargetField')),
+        h('div', { class: 'bp-input small' },
+          h('input', { name: 'target_bp_sys', type: 'number', inputmode: 'numeric', min: 90, max: 200, placeholder: '130', 'aria-label': t('bpUpperShort'), value: p?.target_bp_sys ?? '' }),
+          h('span', { class: 'bp-slash', 'aria-hidden': 'true' }, '/'),
+          h('input', { name: 'target_bp_dia', type: 'number', inputmode: 'numeric', min: 50, max: 130, placeholder: '85', 'aria-label': t('bpLowerShort'), value: p?.target_bp_dia ?? '' })),
+        h('span', { class: 'hint' }, t('bpTargetHint')))),
     err,
     h('div', { class: 'sheet-actions' },
       h('button', { type: 'submit', class: 'btn primary block' }, '✓ ', t('save')),
@@ -626,7 +774,7 @@ function openDataTools(p) {
     } catch (e) { status.textContent = `${t('importFailed')}: ${e.message}`; }
     file.value = '';
   });
-  const fileBase = `rekod-gula-${p.name.replace(/\W+/g, '-')}-${today()}`;
+  const fileBase = `rekod-${p.name.replace(/\W+/g, '-')}-${today()}`;
   const exportJson = async () => {
     const data = await api('GET', `/api/profiles/${p.id}/export`);
     download(`${fileBase}.json`, JSON.stringify(data, null, 2), 'application/json');
@@ -634,10 +782,11 @@ function openDataTools(p) {
   const exportCsv = async () => {
     const { entries } = await api('GET', `/api/profiles/${p.id}/export`);
     const targets = targetsFor(p);
-    const rows = [[t('date'), t('time'), t('type'), t('value'), t('when'), t('signal'), t('description'), t('minutes'), t('notes')],
-      ...entries.map((e) => [e.date, e.time, t('kind_' + e.kind), e.value ?? '',
+    const bpT = bpTargetsFor(p);
+    const rows = [[t('date'), t('time'), t('type'), t('value'), t('pulse'), t('when'), t('signal'), t('description'), t('minutes'), t('notes')],
+      ...entries.map((e) => [e.date, e.time, t('kind_' + e.kind), e.kind === 'bp' ? fmtBp(e) : e.value ?? '', e.pulse ?? '',
         e.kind === 'glucose' ? t('ctx_' + e.context) : e.kind === 'food' ? t('meal_' + e.context) : '',
-        e.kind === 'glucose' ? t('level_' + classify(e.value, e.context, targets).level) : '',
+        e.kind === 'glucose' ? t('level_' + classify(e.value, e.context, targets).level) : e.kind === 'bp' ? t('bp_' + classifyBp(e.value, e.value2, bpT)) : '',
         e.description, e.duration ?? '', e.notes])];
     const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\r\n');
     download(`${fileBase}.csv`, '﻿' + csv, 'text/csv;charset=utf-8');
@@ -671,29 +820,71 @@ function openSettings() {
     h('button', { class: 'btn ghost block', onclick: async () => { await api('POST', '/api/logout', {}); state.me = null; dlg.close(); location.hash = '#/login'; } }, '⎋ ', t('logout'))));
 }
 
-// ---------- monthly report (print) ----------
+// ---------- report (print): one month, or six months ending with the chosen month ----------
 
-async function renderReport(root, id, month) {
-  const [p, entries] = await Promise.all([api('GET', `/api/profiles/${id}`), loadMonth(id, month)]);
+async function renderReport(root, id, lastMonth, months = 1) {
+  const range = periodRange(lastMonth, months);
+  const [p, entries] = await Promise.all([api('GET', `/api/profiles/${id}`), api('GET', `/api/profiles/${id}/entries?from=${range.from}&to=${range.to}`)]);
   const targets = targetsFor(p);
   const s = computeStats(entries, targets);
+  const multi = months > 1;
   const asc = [...entries].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time) || a.id - b.id);
   const g = asc.filter((e) => e.kind === 'glucose');
   const w = asc.filter((e) => e.kind === 'weight');
   const food = asc.filter((e) => e.kind === 'food');
   const act = asc.filter((e) => e.kind === 'activity');
-  const table = (head, rows) => h('div', { class: 'table-wrap' }, h('table', {}, h('thead', {}, h('tr', {}, head.map((x) => h('th', {}, x)))), h('tbody', {}, rows)));
+  const bp = asc.filter((e) => e.kind === 'bp');
+  const bpT = bpTargetsFor(p);
+  const bs = bpStats(bp, bpT);
   const when = (e) => `${fmtDate(e.date)}${e.time ? ' ' + e.time : ''}`;
   const sum = (label, value) => h('div', { class: 'sum' }, h('div', { class: 'sum-label' }, label), h('div', { class: 'sum-value' }, value));
+  const periodLabel = multi ? `${monthLabel(range.first)} – ${monthLabel(range.last)}` : monthLabel(lastMonth);
+
+  // In a six-month report, long tables get a heading row at the start of each month.
+  const table = (head, list, rowFn) => {
+    const rows = [];
+    let current = null;
+    for (const e of list) {
+      const m = e.date.slice(0, 7);
+      if (multi && m !== current) { current = m; rows.push(h('tr', { class: 'month-row' }, h('td', { colspan: head.length }, monthLabel(m)))); }
+      rows.push(rowFn(e));
+    }
+    return h('div', { class: 'table-wrap' }, h('table', {}, h('thead', {}, h('tr', {}, head.map((x) => h('th', {}, x)))), h('tbody', {}, rows)));
+  };
+  const section = (title, list, head, rowFn) => h('section', {}, h('h2', {}, title), list.length ? table(head, list, rowFn) : h('p', { class: 'muted' }, t('noData')));
+
+  const monthTable = () => h('section', {},
+    h('h2', {}, t('monthlySummary')),
+    h('div', { class: 'table-wrap' }, h('table', {},
+      h('thead', {}, h('tr', {}, [t('colMonth'), t('statReadingsTitle'), t('statAverage'), t('statInTarget'), t('colLowHigh'), t('colBp'), t('colWeightEnd'), t('statActivity')].map((x) => h('th', {}, x)))),
+      h('tbody', {}, range.monthList.map((m) => {
+        const inMonth = entries.filter((e) => e.date.startsWith(m));
+        const ms = computeStats(inMonth, targets);
+        const mb = bpStats(inMonth.filter((e) => e.kind === 'bp'), bpT);
+        return h('tr', {},
+          h('td', {}, h('b', {}, monthLabel(m))),
+          h('td', {}, String(ms.count)),
+          h('td', {}, ms.avg != null ? fmt1(ms.avg) : '—'),
+          h('td', {}, ms.count ? `${ms.pctInTarget}%` : '—'),
+          h('td', {}, ms.count ? `${ms.levels.low + ms.levels.below} / ${ms.levels.above + ms.levels.high}` : '—'),
+          h('td', {}, mb.count ? `${mb.avgText} (${mb.pctNormal}%)` : '—'),
+          h('td', {}, ms.weightLast != null ? `${ms.weightLast.toFixed(1)} kg` : '—'),
+          h('td', {}, `${ms.activityMin} ${t('min')}`));
+      })))),
+    h('p', { class: 'small muted' }, t('colLowHighHint'), ' ', t('colBpHint')));
+
+  const reportHref = (n) => `#/p/${p.id}/report/${lastMonth}${n > 1 ? '/' + n : ''}`;
 
   root.replaceChildren(
     h('header', { class: 'bar noprint' },
       h('a', { class: 'icon-btn', href: `#/p/${p.id}/sejarah`, 'aria-label': t('back') }, '‹'),
-      h('div', { class: 'bar-title' }, t('tabReport')),
+      h('div', { class: 'seg', role: 'group', 'aria-label': t('tabReport') },
+        h('a', { class: months === 1 ? 'on' : '', href: reportHref(1), 'aria-current': months === 1 ? 'page' : null }, t('period1')),
+        h('a', { class: months === 6 ? 'on' : '', href: reportHref(6), 'aria-current': months === 6 ? 'page' : null }, t('period6'))),
       h('button', { class: 'btn primary small', onclick: () => window.print() }, '🖨️ ', t('print'))),
     h('article', { class: 'report' },
       h('header', { class: 'report-head' },
-        h('div', {}, h('h1', {}, t('reportTitle')), h('div', { class: 'report-month' }, monthLabel(month))),
+        h('div', {}, h('h1', {}, multi ? t('reportTitle6') : t('reportTitle')), h('div', { class: 'report-month' }, periodLabel)),
         h('div', { class: 'report-who' },
           h('div', {}, h('b', {}, p.name)),
           h('div', {}, t('yearsOld', { n: ageOn(p.birthdate) }), ' · ', genderLabel(p.gender)),
@@ -710,36 +901,32 @@ async function renderReport(root, id, month) {
           sum(t('lowestHighest'), s.count ? `${fmt1(s.min)} / ${fmt1(s.max)}` : '—'),
           sum(t('statInTarget'), s.count ? `${s.pctInTarget}%` : '—'),
           sum(t('statWeight'), s.weightLast != null ? `${s.weightLast.toFixed(2)} kg${s.weightChange != null ? ` (${s.weightChange > 0 ? '+' : ''}${s.weightChange.toFixed(2)})` : ''}` : '—'),
-          sum(t('statActivity'), `${s.activityMin} ${t('minutes')} · ${t('statSessions', { n: s.activityCount })}`)),
-        s.count ? h('div', { class: 'level-bar' }, ['low', 'below', 'normal', 'above', 'high'].map((l) => h('span', {}, signalPill(l), ' × ', h('b', {}, String(s.levels[l]))))) : null,
+          sum(t('statActivity'), `${s.activityMin} ${t('minutes')} · ${t('statSessions', { n: s.activityCount })}`),
+          sum(t('bpAverage'), bs.count ? `${bs.avgText} mmHg` : '—'),
+          sum(t('bpNormalPct'), bs.count ? `${bs.pctNormal}% · ${t('bpReadings', { n: bs.count })}` : '—')),
+        s.count ? h('div', { class: 'level-bar' }, h('b', { class: 'level-bar-label' }, '🩸 ', t('glucoseShort')), ['low', 'below', 'normal', 'above', 'high'].map((l) => h('span', {}, signalPill(l), ' × ', h('b', {}, String(s.levels[l]))))) : null,
+        bs.count ? h('div', { class: 'level-bar' }, h('b', { class: 'level-bar-label' }, '❤️ ', t('bpShort')), ['low', 'normal', 'above', 'high', 'veryhigh'].map((l) => h('span', {}, bpPill(l), ' × ', h('b', {}, String(bs.levels[l]))))) : null,
         h('p', { class: 'small' }, t('reportTargets', { bmin: fmt1(targets.beforeMin), bmax: fmt1(targets.beforeMax), amax: fmt1(targets.afterMax), low: fmt1(LOW) }),
-          ' ', targets.custom ? t('targetsCustom') : t('targetsDefault', { group: t('group_' + targets.group), age: ageOn(p.birthdate) }))),
+          ' ', targets.custom ? t('targetsCustom') : t('targetsDefault', { group: t('group_' + targets.group), age: ageOn(p.birthdate) })),
+        h('p', { class: 'small' }, t('bpReportTargets', { s: bpT.sys, d: bpT.dia }), ' ', bpT.custom ? t('bpTargetsCustom') : t('bpTargetsDefault'))),
+
+      multi ? monthTable() : null,
 
       h('section', { class: 'report-charts' },
-        h('div', {}, h('h2', {}, t('glucoseTrend')), g.length ? [glucoseChart(g, targets, month, true), chartLegend(targets)] : h('p', { class: 'muted' }, t('noData'))),
-        w.length ? h('div', {}, h('h2', {}, t('weightTrend')), weightChart(w, month, true)) : null),
+        h('div', {}, h('h2', {}, t('glucoseTrend')), g.length ? [glucoseChart(g, targets, range, true), chartLegend(targets)] : h('p', { class: 'muted' }, t('noData'))),
+        bp.length ? h('div', {}, h('h2', {}, t('bpTrend')), bpChart(bp, bpT, range, true), bpLegend(bpT)) : null,
+        w.length ? h('div', {}, h('h2', {}, t('weightTrend')), weightChart(w, range, true)) : null),
 
-      h('section', {},
-        h('h2', {}, '🩸 ', t('glucoseReadings')),
-        g.length ? table([t('dateTime'), t('when'), t('value'), t('signal'), t('notes')], g.map((e) => {
-          const c = classify(e.value, e.context, targets);
-          return h('tr', {}, h('td', {}, when(e)), h('td', {}, t('ctx_' + e.context)), h('td', {}, h('b', {}, fmt1(e.value))), h('td', {}, signalPill(c.level)), h('td', {}, e.notes));
-        })) : h('p', { class: 'muted' }, t('noData'))),
-
-      h('section', {},
-        h('h2', {}, '🍽️ ', t('foodDiary')),
-        food.length ? table([t('dateTime'), t('meal'), t('whatEaten'), t('notes')], food.map((e) =>
-          h('tr', {}, h('td', {}, when(e)), h('td', {}, t('meal_' + e.context)), h('td', {}, e.description), h('td', {}, e.notes)))) : h('p', { class: 'muted' }, t('noData'))),
-
-      h('section', {},
-        h('h2', {}, '🚶 ', t('activityLog')),
-        act.length ? table([t('dateTime'), t('activity'), t('duration'), t('notes')], act.map((e) =>
-          h('tr', {}, h('td', {}, when(e)), h('td', {}, e.description), h('td', {}, e.duration ? `${e.duration} ${t('minutes')}` : '—'), h('td', {}, e.notes)))) : h('p', { class: 'muted' }, t('noData'))),
-
-      h('section', {},
-        h('h2', {}, '⚖️ ', t('weightLog')),
-        w.length ? table([t('dateTime'), t('weightKg'), t('notes')], w.map((e) =>
-          h('tr', {}, h('td', {}, when(e)), h('td', {}, e.value.toFixed(2)), h('td', {}, e.notes)))) : h('p', { class: 'muted' }, t('noData'))),
+      section(`🩸 ${t('glucoseReadings')}`, g, [t('dateTime'), t('when'), t('value'), t('signal'), t('notes')], (e) =>
+        h('tr', {}, h('td', {}, when(e)), h('td', {}, t('ctx_' + e.context)), h('td', {}, h('b', {}, fmt1(e.value))), h('td', {}, signalPill(classify(e.value, e.context, targets).level)), h('td', {}, e.notes))),
+      section(`❤️ ${t('bpReadingsTitle')}`, bp, [t('dateTime'), t('bpReadingCol'), t('pulse'), t('signal'), t('notes')], (e) =>
+        h('tr', {}, h('td', {}, when(e)), h('td', {}, h('b', {}, fmtBp(e))), h('td', {}, e.pulse ?? '—'), h('td', {}, bpPill(classifyBp(e.value, e.value2, bpT))), h('td', {}, e.notes))),
+      section(`🍽️ ${t('foodDiary')}`, food, [t('dateTime'), t('meal'), t('whatEaten'), t('notes')], (e) =>
+        h('tr', {}, h('td', {}, when(e)), h('td', {}, t('meal_' + e.context)), h('td', {}, e.description), h('td', {}, e.notes))),
+      section(`🚶 ${t('activityLog')}`, act, [t('dateTime'), t('activity'), t('duration'), t('notes')], (e) =>
+        h('tr', {}, h('td', {}, when(e)), h('td', {}, e.description), h('td', {}, e.duration ? `${e.duration} ${t('minutes')}` : '—'), h('td', {}, e.notes))),
+      section(`⚖️ ${t('weightLog')}`, w, [t('dateTime'), t('weightKg'), t('notes')], (e) =>
+        h('tr', {}, h('td', {}, when(e)), h('td', {}, e.value.toFixed(2)), h('td', {}, e.notes))),
 
       h('footer', { class: 'report-foot small' }, t('disclaimer'))));
 }
@@ -760,7 +947,7 @@ async function render() {
     if (!state.me) { if (hash !== '#/login') { location.hash = '#/login'; return; } return renderLogin(root); }
     if (hash === '#/login') { location.hash = '#/'; return; }
     let m;
-    if ((m = /^#\/p\/(\d+)\/report\/(\d{4}-\d{2})$/.exec(hash))) return await renderReport(root, m[1], m[2]);
+    if ((m = /^#\/p\/(\d+)\/report\/(\d{4}-\d{2})(?:\/(6))?$/.exec(hash))) return await renderReport(root, m[1], m[2], m[3] ? 6 : 1);
     if ((m = /^#\/p\/(\d+)(?:\/(graf|sejarah))?$/.exec(hash))) {
       if (state.personId !== m[1]) { state.personId = m[1]; state.month = thisMonth(); }
       const view = { graf: renderChart, sejarah: renderHistory }[m[2]] || renderToday;
