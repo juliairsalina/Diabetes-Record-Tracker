@@ -271,13 +271,13 @@ async function renderChart(root, id) {
       h('h2', {}, t('glucoseTrend')),
       glucose.length ? [
         h('p', { class: 'chart-summary' }, t('chartSummary', { avg: fmt1(s.avg), a: s.levels.normal, b: s.count })),
-        glucoseChart(glucose, targets, month),
+        glucoseChart(glucose, targets, periodRange(month)),
         h('p', { class: 'chart-legend' }, h('i', { class: 'key band' }), t('legendBandSimple')),
       ] : h('p', { class: 'empty' }, t('noGlucoseMonth'))),
     weight.length ? h('section', { class: 'card' },
       h('h2', {}, t('weightTrend')),
       h('p', { class: 'chart-summary' }, t('weightSummary', { w: s.weightLast.toFixed(1), c: s.weightChange != null ? `${s.weightChange > 0 ? '+' : ''}${s.weightChange.toFixed(1)}` : '0' })),
-      weightChart(weight, month)) : null,
+      weightChart(weight, periodRange(month))) : null,
   ]));
 }
 
@@ -289,7 +289,7 @@ async function renderHistory(root, id) {
   entries.forEach((e) => { if (!byDate.has(e.date)) byDate.set(e.date, []); byDate.get(e.date).push(e); });
   root.replaceChildren(...personShell(p, 'sejarah', [
     monthNav(month, changeMonth),
-    h('a', { class: 'btn secondary block', href: `#/p/${p.id}/report/${month}` }, '🖨️ ', t('printMonthReport')),
+    h('a', { class: 'btn secondary block', href: `#/p/${p.id}/report/${month}` }, '🖨️ ', t('printReport')),
     entries.length ? [...byDate].map(([date, list]) => h('section', { class: 'day' },
       h('h3', { class: 'day-title' }, fmtDateLong(date)),
       entryList(p, list, targets))) : h('p', { class: 'empty' }, t('noEntriesMonth')),
@@ -345,14 +345,29 @@ function computeStats(entries, targets) {
 
 // ---------- charts (inline SVG, one axis each) ----------
 
-// x position inside a month: day + time of day, so several readings on one day spread out.
-function monthX(e, month) {
-  const day = Number(e.date.slice(8, 10));
-  const [hh, mm] = (e.time || '12:00').split(':').map(Number);
-  return (day - 1 + (hh * 60 + mm) / 1440) / daysIn(month);
+const dayNum = (iso) => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) / 864e5;
+
+// The months a chart or report covers, ending with lastMonth. Axis ticks are days for one month
+// and month names for longer periods.
+function periodRange(lastMonth, months = 1) {
+  const first = shiftMonth(lastMonth, -(months - 1));
+  const from = `${first}-01`, to = `${lastMonth}-${pad(daysIn(lastMonth))}`;
+  const start = dayNum(from), days = dayNum(to) - start + 1;
+  const monthList = Array.from({ length: months }, (_, i) => shiftMonth(first, i));
+  const ticks = months === 1
+    ? [1, 10, 20, daysIn(lastMonth)].map((d) => ({ f: (d - 0.5) / days, label: String(d) }))
+    : monthList.map((m) => ({ f: (dayNum(`${m}-01`) - start + daysIn(m) / 2) / days, label: t('monthsShort')[+m.slice(5) - 1] }));
+  const separators = months === 1 ? [] : monthList.slice(1).map((m) => (dayNum(`${m}-01`) - start) / days);
+  return { first, last: lastMonth, months, monthList, from, to, start, days, ticks, separators };
 }
 
-function chartFrame({ points, yMin, yMax, yStep, month, band, refLines = [], print = false }) {
+// x position (0–1) inside the period: day + time of day, so several readings on one day spread out.
+function rangeX(e, range) {
+  const [hh, mm] = (e.time || '12:00').split(':').map(Number);
+  return (dayNum(e.date) - range.start + (hh * 60 + mm) / 1440) / range.days;
+}
+
+function chartFrame({ points, yMin, yMax, yStep, range, band, refLines = [], print = false }) {
   // Drawn at phone proportions so text stays readable; the report uses a wide version.
   const W = print ? 640 : 360, H = print ? 200 : 230, L = 30, R = 8, T = 10, B = 26;
   const x = (f) => L + f * (W - L - R);
@@ -365,12 +380,12 @@ function chartFrame({ points, yMin, yMax, yStep, month, band, refLines = [], pri
       sv('text', { x: L - 6, y: y(v) + 4, 'text-anchor': 'end', class: 'tick' }, Number.isInteger(yStep) ? String(v) : v.toFixed(1)));
   }
   refLines.forEach((r) => svg.append(sv('line', { x1: L, x2: W - R, y1: y(r.v), y2: y(r.v), class: `ref ${r.cls}` })));
-  const days = daysIn(month);
-  [1, 10, 20, days].forEach((d) => svg.append(sv('text', { x: x((d - 0.5) / days), y: H - 7, 'text-anchor': 'middle', class: 'tick' }, String(d))));
+  range.separators.forEach((f) => svg.append(sv('line', { x1: x(f), x2: x(f), y1: T, y2: H - B, class: 'grid' })));
+  range.ticks.forEach((tk) => svg.append(sv('text', { x: x(tk.f), y: H - 7, 'text-anchor': 'middle', class: 'tick' }, tk.label)));
 
   const pts = points.map((p) => ({ ...p, px: x(p.x), py: y(p.v) }));
   if (pts.length > 1) svg.append(sv('polyline', { points: pts.map((p) => `${p.px},${p.py}`).join(' '), class: 'trend' }));
-  pts.forEach((p) => svg.append(sv('circle', { cx: p.px, cy: p.py, r: pts.length > 40 ? 3.5 : 4.5, class: `dot ${p.cls || ''}` })));
+  pts.forEach((p) => svg.append(sv('circle', { cx: p.px, cy: p.py, r: pts.length > 120 ? 2.5 : pts.length > 40 ? 3.5 : 4.5, class: `dot ${p.cls || ''}` })));
 
   const wrap = h('div', { class: 'chart-wrap' }, svg);
   if (!print) attachTooltip(wrap, svg, pts, W);
@@ -398,23 +413,23 @@ function attachTooltip(wrap, svg, pts, W) {
   svg.addEventListener('pointerleave', () => { tip.hidden = true; hair.setAttribute('visibility', 'hidden'); });
 }
 
-function glucoseChart(list, targets, month, print = false) {
+function glucoseChart(list, targets, range, print = false) {
   const sorted = [...list].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const vals = sorted.map((e) => e.value);
   const yMin = Math.max(0, Math.floor(Math.min(3, ...vals) - 0.5));
   const yMax = Math.ceil(Math.max(targets.afterMax + 2, ...vals) + 0.5);
   return chartFrame({
-    month, print, yMin, yMax, yStep: yMax - yMin > 12 ? 4 : 2,
+    range, print, yMin, yMax, yStep: yMax - yMin > 12 ? 4 : 2,
     band: { min: targets.beforeMin, max: targets.beforeMax },
     refLines: [{ v: targets.afterMax, cls: 'after' }, { v: LOW, cls: 'low' }],
     points: sorted.map((e) => {
       const s = classify(e.value, e.context, targets);
-      return { x: monthX(e, month), v: e.value, cls: s.level, valueText: `${fmt1(e.value)} · ${t('level_' + s.level)}`, lines: [`${fmtDate(e.date)}${e.time ? ' ' + e.time : ''}`, t('ctx_' + e.context)] };
+      return { x: rangeX(e, range), v: e.value, cls: s.level, valueText: `${fmt1(e.value)} · ${t('level_' + s.level)}`, lines: [`${fmtDate(e.date)}${e.time ? ' ' + e.time : ''}`, t('ctx_' + e.context)] };
     }),
   });
 }
 
-function weightChart(list, month, print = false) {
+function weightChart(list, range, print = false) {
   const sorted = [...list].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const vals = sorted.map((e) => e.value);
   let lo = Math.min(...vals), hi = Math.max(...vals);
@@ -423,8 +438,8 @@ function weightChart(list, month, print = false) {
   lo = Math.floor((lo - span * 0.2) / step) * step;
   hi = Math.ceil((hi + span * 0.2) / step) * step;
   return chartFrame({
-    month, print, yMin: lo, yMax: hi, yStep: step,
-    points: sorted.map((e) => ({ x: monthX(e, month), v: e.value, cls: 'weight', valueText: `${e.value.toFixed(2)} kg`, lines: [fmtDate(e.date)] })),
+    range, print, yMin: lo, yMax: hi, yStep: step,
+    points: sorted.map((e) => ({ x: rangeX(e, range), v: e.value, cls: 'weight', valueText: `${e.value.toFixed(2)} kg`, lines: [fmtDate(e.date)] })),
   });
 }
 
@@ -541,6 +556,7 @@ function openPersonMenu(p) {
   const dlg = sheet(p.name, h('div', { class: 'menu' },
     h('p', { class: 'muted' }, t('yearsOld', { n: ageOn(p.birthdate) }), ' · ', genderLabel(p.gender), ' · ', t('born'), ' ', fmtDate(p.birthdate)),
     item('🖨️', t('monthlyReport'), () => { location.hash = `#/p/${p.id}/report/${state.month}`; }),
+    item('🗓️', t('sixMonthReport'), () => { location.hash = `#/p/${p.id}/report/${state.month}/6`; }),
     item('🎯', t('targetsAndColours'), () => openTargets(p)),
     item('✎', t('editPerson'), () => openProfileForm(p)),
     item('⇅', t('backup'), () => openDataTools(p)),
@@ -671,29 +687,65 @@ function openSettings() {
     h('button', { class: 'btn ghost block', onclick: async () => { await api('POST', '/api/logout', {}); state.me = null; dlg.close(); location.hash = '#/login'; } }, '⎋ ', t('logout'))));
 }
 
-// ---------- monthly report (print) ----------
+// ---------- report (print): one month, or six months ending with the chosen month ----------
 
-async function renderReport(root, id, month) {
-  const [p, entries] = await Promise.all([api('GET', `/api/profiles/${id}`), loadMonth(id, month)]);
+async function renderReport(root, id, lastMonth, months = 1) {
+  const range = periodRange(lastMonth, months);
+  const [p, entries] = await Promise.all([api('GET', `/api/profiles/${id}`), api('GET', `/api/profiles/${id}/entries?from=${range.from}&to=${range.to}`)]);
   const targets = targetsFor(p);
   const s = computeStats(entries, targets);
+  const multi = months > 1;
   const asc = [...entries].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time) || a.id - b.id);
   const g = asc.filter((e) => e.kind === 'glucose');
   const w = asc.filter((e) => e.kind === 'weight');
   const food = asc.filter((e) => e.kind === 'food');
   const act = asc.filter((e) => e.kind === 'activity');
-  const table = (head, rows) => h('div', { class: 'table-wrap' }, h('table', {}, h('thead', {}, h('tr', {}, head.map((x) => h('th', {}, x)))), h('tbody', {}, rows)));
   const when = (e) => `${fmtDate(e.date)}${e.time ? ' ' + e.time : ''}`;
   const sum = (label, value) => h('div', { class: 'sum' }, h('div', { class: 'sum-label' }, label), h('div', { class: 'sum-value' }, value));
+  const periodLabel = multi ? `${monthLabel(range.first)} – ${monthLabel(range.last)}` : monthLabel(lastMonth);
+
+  // In a six-month report, long tables get a heading row at the start of each month.
+  const table = (head, list, rowFn) => {
+    const rows = [];
+    let current = null;
+    for (const e of list) {
+      const m = e.date.slice(0, 7);
+      if (multi && m !== current) { current = m; rows.push(h('tr', { class: 'month-row' }, h('td', { colspan: head.length }, monthLabel(m)))); }
+      rows.push(rowFn(e));
+    }
+    return h('div', { class: 'table-wrap' }, h('table', {}, h('thead', {}, h('tr', {}, head.map((x) => h('th', {}, x)))), h('tbody', {}, rows)));
+  };
+  const section = (title, list, head, rowFn) => h('section', {}, h('h2', {}, title), list.length ? table(head, list, rowFn) : h('p', { class: 'muted' }, t('noData')));
+
+  const monthTable = () => h('section', {},
+    h('h2', {}, t('monthlySummary')),
+    h('div', { class: 'table-wrap' }, h('table', {},
+      h('thead', {}, h('tr', {}, [t('colMonth'), t('statReadingsTitle'), t('statAverage'), t('statInTarget'), t('colLowHigh'), t('colWeightEnd'), t('statActivity')].map((x) => h('th', {}, x)))),
+      h('tbody', {}, range.monthList.map((m) => {
+        const ms = computeStats(entries.filter((e) => e.date.startsWith(m)), targets);
+        return h('tr', {},
+          h('td', {}, h('b', {}, monthLabel(m))),
+          h('td', {}, String(ms.count)),
+          h('td', {}, ms.avg != null ? fmt1(ms.avg) : '—'),
+          h('td', {}, ms.count ? `${ms.pctInTarget}%` : '—'),
+          h('td', {}, ms.count ? `${ms.levels.low + ms.levels.below} / ${ms.levels.above + ms.levels.high}` : '—'),
+          h('td', {}, ms.weightLast != null ? `${ms.weightLast.toFixed(1)} kg` : '—'),
+          h('td', {}, `${ms.activityMin} ${t('min')}`));
+      })))),
+    h('p', { class: 'small muted' }, t('colLowHighHint')));
+
+  const reportHref = (n) => `#/p/${p.id}/report/${lastMonth}${n > 1 ? '/' + n : ''}`;
 
   root.replaceChildren(
     h('header', { class: 'bar noprint' },
       h('a', { class: 'icon-btn', href: `#/p/${p.id}/sejarah`, 'aria-label': t('back') }, '‹'),
-      h('div', { class: 'bar-title' }, t('tabReport')),
+      h('div', { class: 'seg', role: 'group', 'aria-label': t('tabReport') },
+        h('a', { class: months === 1 ? 'on' : '', href: reportHref(1), 'aria-current': months === 1 ? 'page' : null }, t('period1')),
+        h('a', { class: months === 6 ? 'on' : '', href: reportHref(6), 'aria-current': months === 6 ? 'page' : null }, t('period6'))),
       h('button', { class: 'btn primary small', onclick: () => window.print() }, '🖨️ ', t('print'))),
     h('article', { class: 'report' },
       h('header', { class: 'report-head' },
-        h('div', {}, h('h1', {}, t('reportTitle')), h('div', { class: 'report-month' }, monthLabel(month))),
+        h('div', {}, h('h1', {}, multi ? t('reportTitle6') : t('reportTitle')), h('div', { class: 'report-month' }, periodLabel)),
         h('div', { class: 'report-who' },
           h('div', {}, h('b', {}, p.name)),
           h('div', {}, t('yearsOld', { n: ageOn(p.birthdate) }), ' · ', genderLabel(p.gender)),
@@ -715,31 +767,20 @@ async function renderReport(root, id, month) {
         h('p', { class: 'small' }, t('reportTargets', { bmin: fmt1(targets.beforeMin), bmax: fmt1(targets.beforeMax), amax: fmt1(targets.afterMax), low: fmt1(LOW) }),
           ' ', targets.custom ? t('targetsCustom') : t('targetsDefault', { group: t('group_' + targets.group), age: ageOn(p.birthdate) }))),
 
+      multi ? monthTable() : null,
+
       h('section', { class: 'report-charts' },
-        h('div', {}, h('h2', {}, t('glucoseTrend')), g.length ? [glucoseChart(g, targets, month, true), chartLegend(targets)] : h('p', { class: 'muted' }, t('noData'))),
-        w.length ? h('div', {}, h('h2', {}, t('weightTrend')), weightChart(w, month, true)) : null),
+        h('div', {}, h('h2', {}, t('glucoseTrend')), g.length ? [glucoseChart(g, targets, range, true), chartLegend(targets)] : h('p', { class: 'muted' }, t('noData'))),
+        w.length ? h('div', {}, h('h2', {}, t('weightTrend')), weightChart(w, range, true)) : null),
 
-      h('section', {},
-        h('h2', {}, '🩸 ', t('glucoseReadings')),
-        g.length ? table([t('dateTime'), t('when'), t('value'), t('signal'), t('notes')], g.map((e) => {
-          const c = classify(e.value, e.context, targets);
-          return h('tr', {}, h('td', {}, when(e)), h('td', {}, t('ctx_' + e.context)), h('td', {}, h('b', {}, fmt1(e.value))), h('td', {}, signalPill(c.level)), h('td', {}, e.notes));
-        })) : h('p', { class: 'muted' }, t('noData'))),
-
-      h('section', {},
-        h('h2', {}, '🍽️ ', t('foodDiary')),
-        food.length ? table([t('dateTime'), t('meal'), t('whatEaten'), t('notes')], food.map((e) =>
-          h('tr', {}, h('td', {}, when(e)), h('td', {}, t('meal_' + e.context)), h('td', {}, e.description), h('td', {}, e.notes)))) : h('p', { class: 'muted' }, t('noData'))),
-
-      h('section', {},
-        h('h2', {}, '🚶 ', t('activityLog')),
-        act.length ? table([t('dateTime'), t('activity'), t('duration'), t('notes')], act.map((e) =>
-          h('tr', {}, h('td', {}, when(e)), h('td', {}, e.description), h('td', {}, e.duration ? `${e.duration} ${t('minutes')}` : '—'), h('td', {}, e.notes)))) : h('p', { class: 'muted' }, t('noData'))),
-
-      h('section', {},
-        h('h2', {}, '⚖️ ', t('weightLog')),
-        w.length ? table([t('dateTime'), t('weightKg'), t('notes')], w.map((e) =>
-          h('tr', {}, h('td', {}, when(e)), h('td', {}, e.value.toFixed(2)), h('td', {}, e.notes)))) : h('p', { class: 'muted' }, t('noData'))),
+      section(`🩸 ${t('glucoseReadings')}`, g, [t('dateTime'), t('when'), t('value'), t('signal'), t('notes')], (e) =>
+        h('tr', {}, h('td', {}, when(e)), h('td', {}, t('ctx_' + e.context)), h('td', {}, h('b', {}, fmt1(e.value))), h('td', {}, signalPill(classify(e.value, e.context, targets).level)), h('td', {}, e.notes))),
+      section(`🍽️ ${t('foodDiary')}`, food, [t('dateTime'), t('meal'), t('whatEaten'), t('notes')], (e) =>
+        h('tr', {}, h('td', {}, when(e)), h('td', {}, t('meal_' + e.context)), h('td', {}, e.description), h('td', {}, e.notes))),
+      section(`🚶 ${t('activityLog')}`, act, [t('dateTime'), t('activity'), t('duration'), t('notes')], (e) =>
+        h('tr', {}, h('td', {}, when(e)), h('td', {}, e.description), h('td', {}, e.duration ? `${e.duration} ${t('minutes')}` : '—'), h('td', {}, e.notes))),
+      section(`⚖️ ${t('weightLog')}`, w, [t('dateTime'), t('weightKg'), t('notes')], (e) =>
+        h('tr', {}, h('td', {}, when(e)), h('td', {}, e.value.toFixed(2)), h('td', {}, e.notes))),
 
       h('footer', { class: 'report-foot small' }, t('disclaimer'))));
 }
@@ -760,7 +801,7 @@ async function render() {
     if (!state.me) { if (hash !== '#/login') { location.hash = '#/login'; return; } return renderLogin(root); }
     if (hash === '#/login') { location.hash = '#/'; return; }
     let m;
-    if ((m = /^#\/p\/(\d+)\/report\/(\d{4}-\d{2})$/.exec(hash))) return await renderReport(root, m[1], m[2]);
+    if ((m = /^#\/p\/(\d+)\/report\/(\d{4}-\d{2})(?:\/(6))?$/.exec(hash))) return await renderReport(root, m[1], m[2], m[3] ? 6 : 1);
     if ((m = /^#\/p\/(\d+)(?:\/(graf|sejarah))?$/.exec(hash))) {
       if (state.personId !== m[1]) { state.personId = m[1]; state.month = thisMonth(); }
       const view = { graf: renderChart, sejarah: renderHistory }[m[2]] || renderToday;

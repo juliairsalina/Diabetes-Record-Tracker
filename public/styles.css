@@ -239,6 +239,12 @@ dialog.sheet::backdrop { background: rgba(10, 40, 35, 0.5); }
 .toast.ok { background: var(--primary); }
 
 /* ---------- report (print view) ---------- */
+.seg { flex: 1; display: flex; justify-content: center; }
+.seg a { padding: 9px 16px; min-height: 44px; display: inline-flex; align-items: center; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-weight: 700; font-size: 0.95rem; text-decoration: none; }
+.seg a:first-child { border-radius: 12px 0 0 12px; }
+.seg a:last-child { border-radius: 0 12px 12px 0; border-left: 0; }
+.seg a.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.report .month-row td { background: var(--bg); font-weight: 800; padding-top: 10px; }
 .report { max-width: 900px; margin: 12px auto 40px; background: #fff; padding: 18px; border-radius: 18px; border: 1px solid var(--line); font-size: 15px; }
 .report section { margin-top: 22px; }
 .report h1 { font-size: 1.5rem; }
@@ -273,6 +279,8 @@ dialog.sheet::backdrop { background: rgba(10, 40, 35, 0.5); }
   .report-who { text-align: right; }
   .report section { margin-top: 14px; }
   .report tr, .sum, .report-charts > div { break-inside: avoid; }
+  .report .month-row td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .report .month-row { break-after: avoid; }
   .report h2 { break-after: avoid; }
   .pill, .chart .dot, .chart .band, .key { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }

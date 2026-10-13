@@ -2,11 +2,15 @@
 export const STRINGS = {
   ms: {
     appName: 'Rekod Gula',
+    printReport: 'Cetak laporan (1 atau 6 bulan)', sixMonthReport: 'Laporan 6 bulan',
+    period1: '1 bulan', period6: '6 bulan', reportTitle6: 'Laporan Gula Darah 6 Bulan',
+    monthlySummary: 'Ringkasan setiap bulan', colMonth: 'Bulan', colLowHigh: 'Rendah / Tinggi', colWeightEnd: 'Berat akhir',
+    colLowHighHint: 'Rendah / Tinggi = bilangan bacaan di bawah / di atas sasaran.',
     addGlucoseShort: 'Rekod Gula', lastReading: 'Terakhir',
     chartSummary: 'Purata {avg} mmol/L · {a} daripada {b} bacaan normal',
     weightSummary: 'Terkini {w} kg · {c} kg bulan ini',
     legendBandSimple: 'Kawasan hijau = sasaran sebelum makan',
-    printMonthReport: 'Cetak laporan bulan ini', targetsAndColours: 'Sasaran & maksud warna',
+    targetsAndColours: 'Sasaran & maksud warna',
     ctxShort_before_breakfast: 'puasa', ctxShort_before_meal: 'sebelum makan', ctxShort_before_lunch: 'sebelum makan', ctxShort_before_dinner: 'sebelum makan',
     ctxShort_after_meal: 'selepas makan', ctxShort_bedtime: 'sebelum tidur', ctxShort_other: '', ctxShort_unspecified: '',
     meaning_normal: 'dalam sasaran', meaning_below: 'sedikit rendah', meaning_above: 'sedikit tinggi', meaning_low: 'rendah, ambil gula segera', meaning_high: 'sangat tinggi, hubungi doktor',
@@ -113,11 +117,15 @@ export const STRINGS = {
 
   en: {
     appName: 'Rekod Gula',
+    printReport: 'Print report (1 or 6 months)', sixMonthReport: '6-month report',
+    period1: '1 month', period6: '6 months', reportTitle6: '6-Month Blood Sugar Report',
+    monthlySummary: 'Month by month', colMonth: 'Month', colLowHigh: 'Low / High', colWeightEnd: 'Weight at end',
+    colLowHighHint: 'Low / High = number of readings below / above target.',
     addGlucoseShort: 'Record Sugar', lastReading: 'Last',
     chartSummary: 'Average {avg} mmol/L · {a} of {b} readings normal',
     weightSummary: 'Latest {w} kg · {c} kg this month',
     legendBandSimple: 'Green area = before-meal target',
-    printMonthReport: 'Print this month’s report', targetsAndColours: 'Targets & colours',
+    targetsAndColours: 'Targets & colours',
     ctxShort_before_breakfast: 'fasting', ctxShort_before_meal: 'before meal', ctxShort_before_lunch: 'before meal', ctxShort_before_dinner: 'before meal',
     ctxShort_after_meal: 'after meal', ctxShort_bedtime: 'bedtime', ctxShort_other: '', ctxShort_unspecified: '',
     meaning_normal: 'in target', meaning_below: 'a little low', meaning_above: 'a little high', meaning_low: 'low, take sugar now', meaning_high: 'very high, call the doctor',

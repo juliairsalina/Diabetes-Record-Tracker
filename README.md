@@ -7,9 +7,9 @@ It is designed **for phones first**. Each person has three bottom tabs:
 
 - **Hari ini** (Today): the last reading in big numbers with its colour, one big *Rekod Gula* button, small buttons for food, activity and weight, and today's records.
 - **Graf** (Charts): the month's sugar and weight graphs.
-- **Sejarah** (History): every record for the month by day (tap one to edit), and the printable monthly report.
+- **Sejarah** (History): every record for the month by day (tap one to edit), and the printable report (1 or 6 months).
 
-The **⋯** menu holds the monthly report, targets and colour meanings, the person's details, backup and settings. Forms open as full-screen sheets with only the essentials. Date and time default to *now*; tap *Tukar* to change them.
+The **⋯** menu holds the 1-month and 6-month reports, targets and colour meanings, the person's details, backup and settings. Forms open as full-screen sheets with only the essentials. Date and time default to *now*; tap *Tukar* to change them.
 
 ## Features
 
@@ -36,7 +36,7 @@ The **⋯** menu holds the monthly report, targets and colour meanings, the pers
   **Gender does not change glucose targets** in clinical guidelines. It is recorded and shown on the report but does not move the thresholds. If the doctor has given personal targets (for example *before breakfast < 6.0, after meal < 10*), enter them under **Ubah maklumat → Sasaran dari doktor**. They then replace the defaults for that person.
 - **Food and activity diary.** Quick buttons for meal times, common activities and durations.
 - **Charts.** Monthly glucose chart with the target band and colour-coded dots, plus a weight chart.
-- **Monthly report.** A printable page with summary, charts and all tables. Use *Cetak / Simpan PDF* to print it or save it as a PDF for the doctor.
+- **Reports: 1 month or 6 months.** A printable page with summary, charts and all tables. The 6-month report adds a month-by-month summary table and charts across the six months, and groups the readings by month. Use *Cetak* to print it or save it as a PDF for the doctor.
 - **Backup.** Download JSON or CSV (opens in Excel). You can import JSON backups, including backups from the old single-page *Rekod Kesihatan Ibu* file.
 
 ## Put it online (Vercel + Turso, free)
