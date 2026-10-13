@@ -337,8 +337,17 @@ function entryText(e) {
   return [`${KIND_ICON.activity} `, h('b', {}, e.description), e.duration ? ` · ${e.duration} ${t('min')}` : ''];
 }
 
+// Where a record sits in the day, so a day reads from morning to night. Records saved without
+// a time are placed by their meal or reading time.
+const USUAL_TIME = {
+  breakfast: '08:00', lunch: '13:00', dinner: '19:30', snack: '16:00',
+  before_breakfast: '07:30', before_meal: '12:30', before_lunch: '12:30', before_dinner: '18:30', after_meal: '21:30', bedtime: '22:30',
+};
+const dayOrder = (e) => e.time || USUAL_TIME[e.context] || (e.kind === 'weight' ? '07:00' : '12:00');
+
 function entryList(p, list, targets) {
   const bpT = bpTargetsFor(p);
+  list = [...list].sort((a, b) => dayOrder(a).localeCompare(dayOrder(b)) || a.id - b.id);
   return h('div', { class: 'entries' }, list.map((e) => {
     let badge = null;
     if (e.kind === 'glucose') {

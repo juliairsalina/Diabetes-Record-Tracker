@@ -172,7 +172,7 @@ textarea { resize: vertical; }
 .entry:active { background: var(--bg); }
 .entry-time { flex: none; width: 48px; color: var(--ink-2); font-size: 0.9rem; font-weight: 600; }
 .entry-body { flex: 1; min-width: 0; }
-.entry-line { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.entry-line { overflow-wrap: anywhere; }
 .entry-line .num { font-size: 1.3rem; }
 .entry-line .unit { color: var(--ink-2); font-size: 0.9rem; }
 .entry-kind { font-size: 1.2rem; }
