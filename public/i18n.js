@@ -1,7 +1,7 @@
 // Bahasa Melayu (default) and English.
 export const STRINGS = {
   ms: {
-    appName: 'Rekod Gula',
+    appName: 'Rekod',
     glucoseShort: 'Gula', addBp: 'Tekanan Darah', bpShort: 'Tekanan darah', bpTitle: 'Tekanan darah', bpTrend: 'Graf tekanan darah',
     bpUpper: 'Atas (sistolik)', bpLower: 'Bawah (diastolik)', bpUpperShort: 'Atas', bpLowerShort: 'Bawah',
     bpTargetLine: 'Had normal {s}/{d}', bpSummary: 'Purata {avg} mmHg · {a} daripada {b} bacaan normal',
@@ -43,7 +43,7 @@ export const STRINGS = {
     change: 'Tukar', notesOptional: 'Nota (tidak wajib)', deleteRecord: 'Padam rekod ini', deletePerson: 'Padam orang ini',
     language: 'Bahasa', print: 'Cetak',
     ctx_before_meal: 'Sebelum makan',
-    tagline: 'Catatan gula darah keluarga yang mudah',
+    tagline: 'Catatan kesihatan keluarga yang mudah',
     months: ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'],
     weekdays: ['Ahad', 'Isnin', 'Selasa', 'Rabu', 'Khamis', 'Jumaat', 'Sabtu'],
     close: 'Tutup', ok: 'OK', save: 'Simpan', delete: 'Padam', edit: 'Ubah', back: 'Kembali',
@@ -135,7 +135,7 @@ export const STRINGS = {
   },
 
   en: {
-    appName: 'Rekod Gula',
+    appName: 'Record',
     glucoseShort: 'Sugar', addBp: 'Blood Pressure', bpShort: 'Blood pressure', bpTitle: 'Blood pressure', bpTrend: 'Blood pressure chart',
     bpUpper: 'Upper (systolic)', bpLower: 'Lower (diastolic)', bpUpperShort: 'Upper', bpLowerShort: 'Lower',
     bpTargetLine: 'Normal limit {s}/{d}', bpSummary: 'Average {avg} mmHg · {a} of {b} readings normal',
@@ -177,7 +177,7 @@ export const STRINGS = {
     change: 'Change', notesOptional: 'Notes (optional)', deleteRecord: 'Delete this record', deletePerson: 'Delete this person',
     language: 'Language', print: 'Print',
     ctx_before_meal: 'Before a meal',
-    tagline: 'Simple blood sugar diary for the family',
+    tagline: 'Simple health diary for the family',
     months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
     weekdays: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     close: 'Close', ok: 'OK', save: 'Save', delete: 'Delete', edit: 'Edit', back: 'Back',

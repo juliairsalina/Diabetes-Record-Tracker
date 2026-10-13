@@ -774,7 +774,7 @@ function openDataTools(p) {
     } catch (e) { status.textContent = `${t('importFailed')}: ${e.message}`; }
     file.value = '';
   });
-  const fileBase = `rekod-gula-${p.name.replace(/\W+/g, '-')}-${today()}`;
+  const fileBase = `rekod-${p.name.replace(/\W+/g, '-')}-${today()}`;
   const exportJson = async () => {
     const data = await api('GET', `/api/profiles/${p.id}/export`);
     download(`${fileBase}.json`, JSON.stringify(data, null, 2), 'application/json');
