@@ -266,8 +266,9 @@ dialog.sheet::backdrop { background: rgba(10, 40, 35, 0.5); }
 .toast.ok { background: var(--primary); }
 
 /* ---------- report (print view) ---------- */
-.seg { flex: 1; display: flex; justify-content: center; }
-.seg a { padding: 9px 16px; min-height: 44px; display: inline-flex; align-items: center; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-weight: 700; font-size: 0.95rem; text-decoration: none; }
+.seg { flex: 1; display: flex; justify-content: center; min-width: 0; }
+.print-row { max-width: 900px; margin: 12px auto 0; padding: 0 12px; }
+.seg a { padding: 8px 11px; min-height: 44px; display: inline-flex; align-items: center; white-space: nowrap; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-weight: 700; font-size: 0.95rem; text-decoration: none; }
 .seg a:first-child { border-radius: 12px 0 0 12px; }
 .seg a:last-child { border-radius: 0 12px 12px 0; border-left: 0; }
 .seg a.on { background: var(--primary); border-color: var(--primary); color: #fff; }
