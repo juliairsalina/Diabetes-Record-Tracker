@@ -36,7 +36,7 @@ test('accounts, profiles, entries, import and isolation', async (t) => {
   assert.equal(p.name, 'Mama');
   assert.equal((await a('POST', '/api/profiles', { name: 'X', birthdate: '1960-05-01', gender: 'other' })).status, 400);
 
-  const g = await a('POST', `/api/profiles/${p.id}/entries`, { kind: 'glucose', date: '2026-10-12', time: '08:30', value: '5.6', context: 'before_breakfast' });
+  const g = await a('POST', `/api/profiles/${p.id}/entries`, { kind: 'glucose', date: '2026-10-12', time: '23:00', value: '5.6', context: 'before_breakfast' });
   assert.equal(g.status, 200);
   assert.equal(g.data.value, 5.6);
   assert.equal((await a('POST', `/api/profiles/${p.id}/entries`, { kind: 'food', date: '2026-10-12', context: 'lunch', description: '' })).status, 400);

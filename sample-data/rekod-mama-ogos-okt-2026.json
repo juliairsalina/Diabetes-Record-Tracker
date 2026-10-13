@@ -5,7 +5,7 @@
       "date": "2026-08-25",
       "value": 5.6,
       "time": "",
-      "context": "unspecified",
+      "context": "before_breakfast",
       "notes": ""
     },
     {
@@ -13,7 +13,7 @@
       "date": "2026-08-26",
       "value": 5.4,
       "time": "",
-      "context": "unspecified",
+      "context": "before_breakfast",
       "notes": ""
     },
     {
@@ -21,7 +21,7 @@
       "date": "2026-08-27",
       "value": 6,
       "time": "09:00",
-      "context": "unspecified",
+      "context": "before_breakfast",
       "notes": ""
     },
     {
@@ -37,7 +37,7 @@
       "date": "2026-08-28",
       "value": 5.9,
       "time": "09:45",
-      "context": "unspecified",
+      "context": "before_breakfast",
       "notes": ""
     },
     {
@@ -45,7 +45,7 @@
       "date": "2026-08-29",
       "value": 5,
       "time": "09:35",
-      "context": "unspecified",
+      "context": "before_breakfast",
       "notes": ""
     },
     {
@@ -53,7 +53,7 @@
       "date": "2026-08-30",
       "value": 5.2,
       "time": "09:30",
-      "context": "unspecified",
+      "context": "before_breakfast",
       "notes": ""
     },
     {
@@ -61,7 +61,7 @@
       "date": "2026-08-31",
       "value": 5.7,
       "time": "10:30",
-      "context": "unspecified",
+      "context": "before_breakfast",
       "notes": ""
     },
     {
@@ -69,7 +69,7 @@
       "date": "2026-09-01",
       "value": 5.4,
       "time": "08:15",
-      "context": "unspecified",
+      "context": "before_breakfast",
       "notes": ""
     },
     {
@@ -77,7 +77,7 @@
       "date": "2026-09-02",
       "value": 6.2,
       "time": "08:35",
-      "context": "unspecified",
+      "context": "before_breakfast",
       "notes": ""
     },
     {
@@ -85,7 +85,7 @@
       "date": "2026-09-03",
       "value": 4.9,
       "time": "07:20",
-      "context": "unspecified",
+      "context": "before_breakfast",
       "notes": ""
     },
     {
@@ -93,7 +93,7 @@
       "date": "2026-09-04",
       "value": 5.5,
       "time": "08:30",
-      "context": "unspecified",
+      "context": "before_breakfast",
       "notes": ""
     },
     {
@@ -101,7 +101,7 @@
       "date": "2026-09-05",
       "value": 5.3,
       "time": "10:45",
-      "context": "unspecified",
+      "context": "before_breakfast",
       "notes": ""
     },
     {
@@ -109,7 +109,7 @@
       "date": "2026-09-06",
       "value": 5.4,
       "time": "09:30",
-      "context": "unspecified",
+      "context": "before_breakfast",
       "notes": ""
     },
     {
@@ -117,7 +117,7 @@
       "date": "2026-09-07",
       "value": 5.2,
       "time": "08:30",
-      "context": "unspecified",
+      "context": "before_breakfast",
       "notes": ""
     },
     {
@@ -125,7 +125,7 @@
       "date": "2026-09-08",
       "value": 5.5,
       "time": "04:50",
-      "context": "unspecified",
+      "context": "before_breakfast",
       "notes": ""
     },
     {
@@ -133,7 +133,7 @@
       "date": "2026-09-09",
       "value": 5.7,
       "time": "08:40",
-      "context": "unspecified",
+      "context": "before_breakfast",
       "notes": ""
     },
     {
@@ -141,7 +141,7 @@
       "date": "2026-09-10",
       "value": 5.4,
       "time": "05:18",
-      "context": "unspecified",
+      "context": "before_breakfast",
       "notes": ""
     },
     {
@@ -149,7 +149,7 @@
       "date": "2026-09-11",
       "value": 5.4,
       "time": "08:15",
-      "context": "unspecified",
+      "context": "before_breakfast",
       "notes": ""
     },
     {
@@ -182,7 +182,7 @@
       "value": 5.4,
       "time": "",
       "context": "before_breakfast",
-      "notes": "Makan malam sebelumnya: nasi Korea, daging, sayur, doenjang"
+      "notes": "Makan malam sebelumnya: nasi Korea, daging, sayur, jangsejong"
     },
     {
       "kind": "glucose",
@@ -204,9 +204,9 @@
       "kind": "glucose",
       "date": "2026-09-20",
       "value": 5.8,
-      "time": "",
+      "time": "12:15",
       "context": "before_lunch",
-      "notes": "Sarapan: susu metabolic 3 sudu; masa asal 12.15am (tidak jelas, perlu semak)"
+      "notes": "Sarapan: susu metabolic 3 sudu (nota asal: 12.15am)"
     },
     {
       "kind": "glucose",
@@ -324,7 +324,7 @@
       "kind": "glucose",
       "date": "2026-10-12",
       "value": 6,
-      "time": "",
+      "time": "18:30",
       "context": "before_dinner",
       "notes": "Tidak sempat makan tengah hari; snek 3 petang: 2 keping roti whole wheat dengan mentega kacang tanpa gula"
     },
