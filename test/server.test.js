@@ -41,6 +41,11 @@ test('accounts, profiles, entries, import and isolation', async (t) => {
   assert.equal(g.data.value, 5.6);
   assert.equal((await a('POST', `/api/profiles/${p.id}/entries`, { kind: 'food', date: '2026-10-12', context: 'lunch', description: '' })).status, 400);
   assert.equal((await a('POST', `/api/profiles/${p.id}/entries`, { kind: 'activity', date: '2026-10-12', description: 'Treadmill', duration: 30 })).status, 200);
+  const bp = await a('POST', `/api/profiles/${p.id}/entries`, { kind: 'bp', date: '2026-10-12', time: '08:00', value: '128', value2: '82', pulse: '72' });
+  assert.equal(bp.status, 200);
+  assert.deepEqual([bp.data.value, bp.data.value2, bp.data.pulse], [128, 82, 72]);
+  assert.equal((await a('POST', `/api/profiles/${p.id}/entries`, { kind: 'bp', date: '2026-10-12', value: '80', value2: '120' })).status, 400);
+  assert.equal((await a('GET', `/api/profiles/${p.id}`)).data.last_bp.value2, 82);
 
   const sample = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'sample-data', 'rekod-mama-ogos-okt-2026.json'), 'utf8'));
   const imp = await a('POST', `/api/profiles/${p.id}/import`, sample);
@@ -93,4 +98,41 @@ test('works with Vercel-style requests', async () => {
   assert.equal(list.data.length, 1);
   assert.equal(list.data[0].value, 5.4);
   assert.equal((await call('GET', '/api?path=nope', undefined, cookie)).status, 404);
+});
+
+// A database created before blood pressure existed is upgraded without losing records.
+test('upgrades an old database and keeps its records', async (t) => {
+  const os = require('node:os');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rekod-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const url = 'file:' + path.join(dir, 'old.db');
+  const old = connect({ url });
+  await old.batch([
+    "CREATE TABLE accounts (id INTEGER PRIMARY KEY, username TEXT NOT NULL UNIQUE COLLATE NOCASE, display_name TEXT NOT NULL, password_hash TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))",
+    "CREATE TABLE profiles (id INTEGER PRIMARY KEY, account_id INTEGER NOT NULL, name TEXT NOT NULL, birthdate TEXT NOT NULL, gender TEXT NOT NULL CHECK (gender IN ('male','female')), target_before_min REAL, target_before_max REAL, target_after_max REAL, created_at TEXT NOT NULL DEFAULT (datetime('now')))",
+    "CREATE TABLE entries (id INTEGER PRIMARY KEY, profile_id INTEGER NOT NULL, kind TEXT NOT NULL CHECK (kind IN ('glucose','weight','food','activity')), date TEXT NOT NULL, time TEXT NOT NULL DEFAULT '', value REAL, context TEXT NOT NULL DEFAULT '', duration INTEGER, description TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT (datetime('now')))",
+    "INSERT INTO accounts (id, username, display_name, password_hash) VALUES (1, 'julia', 'Julia', 'x')",
+    "INSERT INTO profiles (id, account_id, name, birthdate, gender, target_before_max) VALUES (1, 1, 'Mama', '1974-01-18', 'female', 6)",
+    "INSERT INTO entries (profile_id, kind, date, time, value, context, notes) VALUES (1, 'glucose', '2026-10-12', '18:30', 6.0, 'before_dinner', 'nota lama')",
+    "INSERT INTO entries (profile_id, kind, date, value) VALUES (1, 'weight', '2026-10-12', 69.05)",
+  ], 'write');
+  old.close();
+
+  const { createApp } = require('../lib/app.js');
+  const app = createApp({ db: connect({ url }) });
+  await app.ready;
+  await app.ready; // a second start must not run the rebuild again
+  const rows = (await app.db.execute('SELECT kind, value, notes FROM entries ORDER BY id')).rows;
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].notes, 'nota lama');
+  assert.equal(rows[1].value, 69.05);
+  const p = (await app.db.execute('SELECT target_before_max, target_bp_sys FROM profiles WHERE id = 1')).rows[0];
+  assert.equal(p.target_before_max, 6);
+  assert.equal(p.target_bp_sys, null);
+  await app.db.execute("INSERT INTO entries (profile_id, kind, date, value, value2, pulse) VALUES (1, 'bp', '2026-10-13', 128, 82, 72)");
+  assert.equal((await app.db.execute("SELECT COUNT(*) AS n FROM entries WHERE kind = 'bp'")).rows[0].n, 1);
+  // starting again on the upgraded database is a no-op
+  const again = createApp({ db: connect({ url }) });
+  await again.ready;
+  assert.equal((await again.db.execute('SELECT COUNT(*) AS n FROM entries')).rows[0].n, 3);
 });

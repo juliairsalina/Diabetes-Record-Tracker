@@ -34,6 +34,7 @@ The **⋯** menu holds the 1-month and 6-month reports, targets and colour meani
   | 65 + | 4.4 – 8.0 | up to 10.0 (relaxed to avoid lows) |
 
   **Gender does not change glucose targets** in clinical guidelines. It is recorded and shown on the report but does not move the thresholds. If the doctor has given personal targets (for example *before breakfast < 6.0, after meal < 10*), enter them under **Ubah maklumat → Sasaran dari doktor**. They then replace the defaults for that person.
+- **Blood pressure.** Record the upper and lower numbers (and pulse, if you like). Each reading gets a label based on the Malaysian Hypertension CPG: *Normal* (below 130/85, or the doctor's target), *Agak tinggi* (up to 139/89), *Tinggi* (140/90 or more), *Sangat tinggi* (180/110 or more, with advice to seek help) and *Rendah* (below 90/60). A doctor's target, e.g. "below 130/80", can be entered under **Ubah maklumat**. Blood pressure has its own graph and is in both reports.
 - **Food and activity diary.** Quick buttons for meal times, common activities and durations.
 - **Charts.** Monthly glucose chart with the target band and colour-coded dots, plus a weight chart.
 - **Reports: 1 month or 6 months.** A printable page with summary, charts and all tables. The 6-month report adds a month-by-month summary table and charts across the six months, and groups the readings by month. Use *Cetak* to print it or save it as a PDF for the doctor.

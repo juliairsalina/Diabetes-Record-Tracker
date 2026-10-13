@@ -37,3 +37,29 @@ test('signal levels', () => {
   assert.equal(classify(14.2, 'after_meal', tg).level, 'high');
   assert.equal(classify(2.8, 'other', tg).veryLow, true);
 });
+
+import { bpTargetsFor, classifyBp } from '../public/ranges.js';
+
+test('blood pressure levels', () => {
+  const tg = bpTargetsFor({});
+  assert.equal(classifyBp(118, 76, tg), 'normal');
+  assert.equal(classifyBp(129, 84, tg), 'normal');
+  assert.equal(classifyBp(130, 80, tg), 'above');
+  assert.equal(classifyBp(134, 80, tg), 'above');
+  assert.equal(classifyBp(125, 87, tg), 'above');
+  assert.equal(classifyBp(145, 85, tg), 'high');
+  assert.equal(classifyBp(128, 92, tg), 'high');
+  assert.equal(classifyBp(185, 100, tg), 'veryhigh');
+  assert.equal(classifyBp(150, 112, tg), 'veryhigh');
+  assert.equal(classifyBp(88, 58, tg), 'low');
+});
+
+test('doctor blood pressure target', () => {
+  const strict = bpTargetsFor({ target_bp_sys: 130, target_bp_dia: 80 });
+  assert.equal(strict.custom, true);
+  assert.equal(classifyBp(128, 82, strict), 'above');
+  const relaxed = bpTargetsFor({ target_bp_sys: 150, target_bp_dia: 90 });
+  assert.equal(classifyBp(146, 88, relaxed), 'normal');
+  assert.equal(classifyBp(146, 90, relaxed), 'high');
+  assert.equal(classifyBp(155, 88, relaxed), 'high');
+});

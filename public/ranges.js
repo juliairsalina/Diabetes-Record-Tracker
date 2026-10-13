@@ -70,3 +70,40 @@ export function classify(value, context, targets) {
   else level = 'high';
   return { level, range, veryLow: v < VERY_LOW };
 }
+
+// ---------- blood pressure (mmHg) ----------
+// Based on the Malaysian CPG on Hypertension (2018) categories:
+//   normal < 130/85 · high normal 130–139 / 85–89 · hypertension >= 140/90 · grade 3 >= 180/110.
+// Like glucose, the thresholds do not depend on gender. A doctor's target ("below 130/80",
+// "below 150/90"), entered on the profile, replaces the "normal" limit.
+
+export const BP_DEFAULT = { sys: 130, dia: 85 }; // normal = below both numbers
+export const BP_LOW = { sys: 90, dia: 60 };
+export const BP_HIGH = { sys: 140, dia: 90 };
+export const BP_VERY_HIGH = { sys: 180, dia: 110 };
+
+export function bpTargetsFor(profile) {
+  const pick = (v, fallback) => (v == null || v === '' ? fallback : Number(v));
+  const t = { sys: pick(profile.target_bp_sys, BP_DEFAULT.sys), dia: pick(profile.target_bp_dia, BP_DEFAULT.dia) };
+  t.custom = t.sys !== BP_DEFAULT.sys || t.dia !== BP_DEFAULT.dia;
+  return t;
+}
+
+// level: 'low' | 'normal' | 'above' | 'high' | 'veryhigh'
+//  low      (yellow) < 90 or < 60          low blood pressure
+//  normal   (green)  below the target
+//  above    (yellow) above target, < 140/90
+//  high     (red)    >= 140 or >= 90       high blood pressure
+//  veryhigh (red)    >= 180 or >= 110      very high, seek medical help
+// The worse of the two numbers decides.
+export function classifyBp(sys, dia, targets) {
+  sys = Number(sys); dia = Number(dia);
+  if (sys >= BP_VERY_HIGH.sys || dia >= BP_VERY_HIGH.dia) return 'veryhigh';
+  if (sys < BP_LOW.sys || dia < BP_LOW.dia) return 'low';
+  if (sys < targets.sys && dia < targets.dia) return 'normal';
+  if (sys < BP_HIGH.sys && dia < BP_HIGH.dia) return 'above';
+  return 'high';
+}
+
+// The shared colour (CSS class) for each blood pressure level.
+export const BP_COLOUR = { low: 'below', normal: 'normal', above: 'above', high: 'high', veryhigh: 'high' };
