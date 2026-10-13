@@ -672,8 +672,7 @@ function openPersonMenu(p) {
   const item = (icon, label, onclick, cls = '') => h('button', { class: `menu-item ${cls}`, onclick: () => { dlg.close(); onclick(); } }, h('span', { 'aria-hidden': 'true' }, icon), label);
   const dlg = sheet(p.name, h('div', { class: 'menu' },
     h('p', { class: 'muted' }, t('yearsOld', { n: ageOn(p.birthdate) }), ' · ', genderLabel(p.gender), ' · ', t('born'), ' ', fmtDate(p.birthdate)),
-    item('🖨️', t('monthlyReport'), () => { location.hash = `#/p/${p.id}/report/${state.month}`; }),
-    item('🗓️', t('sixMonthReport'), () => { location.hash = `#/p/${p.id}/report/${state.month}/6`; }),
+    item('🖨️', t('printReport'), () => { location.hash = `#/p/${p.id}/report/${state.month}`; }),
     item('🎯', t('targetsAndColours'), () => openTargets(p)),
     item('✎', t('editPerson'), () => openProfileForm(p)),
     item('⇅', t('backup'), () => openDataTools(p)),
@@ -820,7 +819,9 @@ function openSettings() {
     h('button', { class: 'btn ghost block', onclick: async () => { await api('POST', '/api/logout', {}); state.me = null; dlg.close(); location.hash = '#/login'; } }, '⎋ ', t('logout'))));
 }
 
-// ---------- report (print): one month, or six months ending with the chosen month ----------
+// ---------- report (print): 1, 3 or 6 months ending with the chosen month ----------
+
+const REPORT_PERIODS = [1, 3, 6];
 
 async function renderReport(root, id, lastMonth, months = 1) {
   const range = periodRange(lastMonth, months);
@@ -879,12 +880,12 @@ async function renderReport(root, id, lastMonth, months = 1) {
     h('header', { class: 'bar noprint' },
       h('a', { class: 'icon-btn', href: `#/p/${p.id}/sejarah`, 'aria-label': t('back') }, '‹'),
       h('div', { class: 'seg', role: 'group', 'aria-label': t('tabReport') },
-        h('a', { class: months === 1 ? 'on' : '', href: reportHref(1), 'aria-current': months === 1 ? 'page' : null }, t('period1')),
-        h('a', { class: months === 6 ? 'on' : '', href: reportHref(6), 'aria-current': months === 6 ? 'page' : null }, t('period6'))),
-      h('button', { class: 'btn primary small', onclick: () => window.print() }, '🖨️ ', t('print'))),
+        REPORT_PERIODS.map((n) => h('a', { class: months === n ? 'on' : '', href: reportHref(n), 'aria-current': months === n ? 'page' : null }, t('period' + n)))),
+      h('span', { class: 'icon-btn', 'aria-hidden': 'true' })),
+    h('div', { class: 'print-row noprint' }, h('button', { class: 'btn primary block', onclick: () => window.print() }, '🖨️ ', t('printNow'))),
     h('article', { class: 'report' },
       h('header', { class: 'report-head' },
-        h('div', {}, h('h1', {}, multi ? t('reportTitle6') : t('reportTitle')), h('div', { class: 'report-month' }, periodLabel)),
+        h('div', {}, h('h1', {}, multi ? t('reportTitleN', { n: months }) : t('reportTitle')), h('div', { class: 'report-month' }, periodLabel)),
         h('div', { class: 'report-who' },
           h('div', {}, h('b', {}, p.name)),
           h('div', {}, t('yearsOld', { n: ageOn(p.birthdate) }), ' · ', genderLabel(p.gender)),
@@ -947,7 +948,7 @@ async function render() {
     if (!state.me) { if (hash !== '#/login') { location.hash = '#/login'; return; } return renderLogin(root); }
     if (hash === '#/login') { location.hash = '#/'; return; }
     let m;
-    if ((m = /^#\/p\/(\d+)\/report\/(\d{4}-\d{2})(?:\/(6))?$/.exec(hash))) return await renderReport(root, m[1], m[2], m[3] ? 6 : 1);
+    if ((m = /^#\/p\/(\d+)\/report\/(\d{4}-\d{2})(?:\/(3|6))?$/.exec(hash))) return await renderReport(root, m[1], m[2], m[3] ? Number(m[3]) : 1);
     if ((m = /^#\/p\/(\d+)(?:\/(graf|sejarah))?$/.exec(hash))) {
       if (state.personId !== m[1]) { state.personId = m[1]; state.month = thisMonth(); }
       const view = { graf: renderChart, sejarah: renderHistory }[m[2]] || renderToday;
