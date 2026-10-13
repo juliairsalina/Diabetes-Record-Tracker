@@ -1,4 +1,5 @@
 # Rekod Gula — Diabetes Record Tracker
+(This project and website is only to be used by my family since all other apps need subscription :((( HAHA)
 
 A simple family website for logging blood glucose, food, physical activity and weight. It is built for parents: large buttons, Bahasa Melayu by default (English toggle), and a clear traffic-light signal after every reading.
 
